@@ -104,13 +104,13 @@ export default async function handler(req, res) {
 
 function verifyAuthToken(authToken, userEmail, secret) {
   try {
-    // Verify the token matches what we expect for this user
+    // Use simple time-based verification that matches Wix
     const timestamp = Math.floor(Date.now() / (1000 * 60 * 30)); // 30-minute window
-    const expectedToken = generateAuthToken(userEmail, timestamp, secret);
+    const expectedToken = generateSimpleToken(userEmail, timestamp, secret);
     
     // Also check previous time window for clock drift
     const previousTimestamp = timestamp - 1;
-    const previousToken = generateAuthToken(userEmail, previousTimestamp, secret);
+    const previousToken = generateSimpleToken(userEmail, previousTimestamp, secret);
     
     return authToken === expectedToken || authToken === previousToken;
   } catch (error) {
@@ -119,18 +119,26 @@ function verifyAuthToken(authToken, userEmail, secret) {
   }
 }
 
-function generateAuthToken(userEmail, timestamp, secret) {
-  // Simple but secure token generation
-  const crypto = require('crypto');
+function generateSimpleToken(userEmail, timestamp, secret) {
+  // Simple token generation that matches Wix client-side
   const payload = `${userEmail}:${timestamp}:${secret}`;
-  return crypto.createHash('sha256').update(payload).digest('hex').substring(0, 16);
+  
+  // Simple hash that works the same on both sides
+  let hash = 0;
+  for (let i = 0; i < payload.length; i++) {
+    const char = payload.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  
+  return Math.abs(hash).toString(16).substring(0, 16);
 }
 
 function getClientForUser(userEmail) {
   // SECURE SERVER-SIDE MAPPING - Update these with your actual user emails
   const userClientMap = {
     'nick@sayshey.com': 'King Ed',
-    'nicksayshey@gmai.com': 'Linden Jay',      
+    'nicksayshey@gmail.com': 'Linden Jay',      
     'client.b@business.com': 'Client B',
     
     // Add more user-to-client mappings here:
