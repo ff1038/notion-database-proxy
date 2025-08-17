@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Client Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .client-name {
+            font-size: 28px;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .dashboard-subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            margin: 10px 0 0 0;
+        }
+        
+        .security-indicator {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+            color: #333;
+        }
+        
+        .record-count {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        .data-table th {
+            background: #f8f9fa;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
+        }
+        
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .tag {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            display: inline-block;
+            margin: 2px;
+        }
+        
+        .status {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        .status.not-started { background: #f8f9fa; color: #6c757d; }
+        .status.in-progress { background: #fff3cd; color: #856404; }
+        .status.completed { background: #d4edda; color: #155724; }
+        .status.on-hold { background: #f8d7da; color: #721c24; }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+            font-size: 16px;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #721c24;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            margin: 20px;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+        }
+        
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .input-group label {
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        .form-input {
+            padding: 10px 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 10px;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+        
+        .refresh-btn:hover {
+            background: #5a6fd8;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <h1 class="client-name" id="clientDisplay">Secure Client Dashboard</h1>
+        <p class="dashboard-subtitle">Your secure, personalized data view</p>
+    </div>
+
+    <div class="security-indicator">
+        <span>🔒</span>
+        <div>
+            <strong>Secure Access:</strong> You can only view data assigned to your account.
+            <div style="font-size: 14px; opacity: 0.8;">User: <span id="userEmail">Loading...</span></div>
+        </div>
+    </div>
+
+    <div class="controls" style="display: none;" id="filterControls">
+        <h3>🔍 Filters (Optional)</h3>
+        <div class="filter-grid">
+            <div class="input-group">
+                <label for="filterProperty">Filter Property:</label>
+                <select id="filterProperty" class="form-input">
+                    <option value="">No additional filter</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="filterCondition">Condition:</label>
+                <select id="filterCondition" class="form-input">
+                    <option value="equals">Equals</option>
+                    <option value="contains">Contains</option>
+                    <option value="checkbox">Is checked</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="filterValue">Value:</label>
+                <input type="text" id="filterValue" class="form-input" placeholder="Filter value">
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button onclick="loadClientDataSecure()" class="btn btn-primary">Apply Filter</button>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div class="table-header">
+            <h2 class="table-title">Your Data</h2>
+            <span id="recordCount" class="record-count"></span>
+        </div>
+        
+        <div id="tableContent">
+            <div class="loading">
+                Securely loading your data...
+            </div>
+        </div>
+    </div>
+    
+    <button class="refresh-btn" onclick="loadClientDataSecure()" title="Refresh Data">
+        ↻
+    </button>
+
+    <script>
+        // Configuration - Replace with your Vercel URL
+        const PROXY_URL = 'https://notion-database-proxy.vercel.app';
+        
+        let availableProperties = {};
+        let currentUserEmail = '';
+
+        // Auto-load on page load with user verification
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const wixUserId = urlParams.get('wixUserId');
+            const userEmail = urlParams.get('userEmail');
+            const authHash = urlParams.get('authHash');
+            
+            if (!wixUserId || !userEmail || !authHash) {
+                showError('Access denied - Invalid authentication credentials.<br>Please access this page through the official website.');
+                return;
+            }
+            
+            currentUserEmail = userEmail;
+            document.getElementById('userEmail').textContent = userEmail;
+            console.log("User authenticated:", userEmail);
+            
+            // Auto-load properties and data for this specific user
+            loadPropertiesSecure().then(() => {
+                loadClientDataSecure();
+            });
+        });
+
+        async function loadPropertiesSecure() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const response = await fetch(`${PROXY_URL}/api/secure-notion?wixUserId=${urlParams.get('wixUserId')}&userEmail=${urlParams.get('userEmail')}&authHash=${urlParams.get('authHash')}&action=properties`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error);
+                }
+
+                const data = await response.json();
+                availableProperties = data.properties;
+                populateFilterOptions();
+                
+                // Show filter controls once properties are loaded
+                document.getElementById('filterControls').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error loading properties:', error);
+                showError(`Error loading database structure: ${error.message}`);
+            }
+        }
+
+        function populateFilterOptions() {
+            const filterSelect = document.getElementById('filterProperty');
+            filterSelect.innerHTML = '<option value="">No additional filter</option>';
+            
+            Object.entries(availableProperties).forEach(([name, property]) => {
+                if (name !== 'Client' && !['relation', 'rollup', 'formula'].includes(property.type)) {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = `${name} (${property.type})`;
+                    filterSelect.appendChild(option);
+                }
+            });
+        }
+
+        async function loadClientDataSecure() {
+            const tableContent = document.getElementById('tableContent');
+            tableContent.innerHTML = '<div class="loading">Securely loading your data...</div>';
+
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                let queryParams = `wixUserId=${urlParams.get('wixUserId')}&userEmail=${urlParams.get('userEmail')}&authHash=${urlParams.get('authHash')}`;
+                
+                // Add additional filters
+                const filterProperty = document.getElementById('filterProperty').value;
+                const filterCondition = document.getElementById('filterCondition').value;
+                const filterValue = document.getElementById('filterValue').value;
+                
+                if (filterProperty && filterCondition) {
+                    queryParams += `&filterProperty=${encodeURIComponent(filterProperty)}`;
+                    queryParams += `&filterCondition=${encodeURIComponent(filterCondition)}`;
+                    if (filterValue) {
+                        queryParams += `&filterValue=${encodeURIComponent(filterValue)}`;
+                    }
+                }
+                
+                const response = await fetch(`${PROXY_URL}/api/secure-notion?${queryParams}`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error);
+                }
+
+                const data = await response.json();
+                
+                // Update client display with server-verified client name
+                if (data.authorizedClient) {
+                    document.getElementById('clientDisplay').textContent = `${data.authorizedClient} Dashboard`;
+                }
+                
+                displayDataAsTable(data);
+                
+            } catch (error) {
+                showError(`Error loading data: ${error.message}`);
+            }
+        }
+
+        function displayDataAsTable(data) {
+            const tableContent = document.getElementById('tableContent');
+            const recordCount = document.getElementById('recordCount');
+            
+            if (!data.results || data.results.length === 0) {
+                tableContent.innerHTML = `
+                    <div class="no-data">
+                        <h3>No data found for your account</h3>
+                        <p>Contact your administrator if you believe this is an error.</p>
+                    </div>
+                `;
+                recordCount.textContent = '0 records';
+                return;
+            }
+
+            recordCount.textContent = `${data.results.length} record${data.results.length !== 1 ? 's' : ''}`;
+
+            // Get all properties except Client
+            const properties = new Set();
+            data.results.forEach(record => {
+                Object.keys(record.properties).forEach(prop => {
+                    if (prop !== 'Client') properties.add(prop);
+                });
+            });
+
+            let html = `
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+            `;
+
+            // Create headers
+            Array.from(properties).forEach(prop => {
+                html += `<th>${prop}</th>`;
+            });
+            html += `</tr></thead><tbody>`;
+
+            // Create rows
+            data.results.forEach(record => {
+                html += '<tr>';
+                Array.from(properties).forEach(prop => {
+                    const property = record.properties[prop];
+                    const value = property ? getPropertyValue(property) : '';
+                    html += `<td>${value}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            tableContent.innerHTML = html;
+        }
+
+        function getPropertyValue(property) {
+            switch (property.type) {
+                case 'title':
+                    return property.title.map(t => t.plain_text).join('');
+                case 'rich_text':
+                    return property.rich_text.map(t => t.plain_text).join('');
+                case 'number':
+                    return property.number || '';
+                case 'select':
+                    return property.select ? `<span class="tag">${property.select.name}</span>` : '';
+                case 'multi_select':
+                    return property.multi_select.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
+                case 'date':
+                    return property.date ? new Date(property.date.start).toLocaleDateString() : '';
+                case 'checkbox':
+                    return property.checkbox ? '✅' : '❌';
+                case 'url':
+                    return property.url ? `<a href="${property.url}" target="_blank" style="color: #667eea;">Link</a>` : '';
+                case 'email':
+                    return property.email ? `<a href="mailto:${property.email}" style="color: #667eea;">${property.email}</a>` : '';
+                case 'phone_number':
+                    return property.phone_number || '';
+                case 'status':
+                    if (property.status) {
+                        const status = property.status.name.toLowerCase().replace(/\s+/g, '-');
+                        return `<span class="status ${status}">${property.status.name}</span>`;
+                    }
+                    return '';
+                case 'people':
+                    return property.people.map(person => person.name).join(', ');
+                default:
+                    return '';
+            }
+        }
+
+        function showError(message) {
+            const tableContent = document.getElementById('tableContent');
+            tableContent.innerHTML = `<div class="error">${message}</div>`;
+        }
+    </script>
+</body>
+</html>
