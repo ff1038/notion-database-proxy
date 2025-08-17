@@ -85,7 +85,7 @@ export default async function handler(req, res) {
 function getSimpleClientForUser(userEmail) {
   const userClientMap = {
     'kinged@gmail.com': 'King Ed',
-    'test@test.com': 'King Ed',  // For testing
+    'nick@sayshey.com': 'King Ed',  // For testing
     // Add your actual mappings here
   };
   
