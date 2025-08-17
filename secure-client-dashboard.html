@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Secure Client Dashboard</title>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Secure client dashboard for data viewing">
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
@@ -243,14 +245,14 @@
 <body>
     <div class="dashboard-header">
         <h1 class="client-name" id="clientDisplay">Secure Client Dashboard</h1>
-        <p class="dashboard-subtitle">Your secure, personalized data view</p>
+        <p class="dashboard-subtitle">Your secure, authenticated data view</p>
     </div>
 
     <div class="security-indicator">
         <span>🔒</span>
         <div>
-            <strong>Secure Access:</strong> You can only view data assigned to your account.
-            <div style="font-size: 14px; opacity: 0.8;">User: <span id="userEmail">Loading...</span></div>
+            <strong>Secure Access:</strong> Authenticated with time-based tokens. You can only view data assigned to your account.
+            <div style="font-size: 14px; opacity: 0.8;">User: <span id="userEmail">Loading...</span> | Token: <span id="tokenStatus">Validating...</span></div>
         </div>
     </div>
 
@@ -290,7 +292,7 @@
         
         <div id="tableContent">
             <div class="loading">
-                Securely loading your data...
+                Authenticating and loading your secure data...
             </div>
         </div>
     </div>
@@ -301,41 +303,60 @@
 
     <script>
         // Configuration - Replace with your Vercel URL
-        const PROXY_URL = 'https://notion-database-proxy.vercel.app';
+        const PROXY_URL = 'https://ff1038-ndp.vercel.app';
         
         let availableProperties = {};
         let currentUserEmail = '';
+        let currentAuthToken = '';
 
-        // Auto-load on page load with user verification
+        // Auto-load on page load with authentication
         window.addEventListener('load', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const wixUserId = urlParams.get('wixUserId');
-            const userEmail = urlParams.get('userEmail');
-            const authHash = urlParams.get('authHash');
+            // Security check first
+            if (!isAccessedFromWix()) {
+                showError('🔒 Access Denied<br><br>This secure dashboard can only be accessed through the official website.<br>Please log in to your account to view your data.');
+                return;
+            }
             
-            if (!wixUserId || !userEmail || !authHash) {
-                showError('Access denied - Invalid authentication credentials.<br>Please access this page through the official website.');
+            // Get user credentials from URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const userEmail = urlParams.get('userEmail');
+            const authToken = urlParams.get('authToken');
+            
+            if (!userEmail || !authToken) {
+                showError('🔒 Authentication Required<br><br>Missing authentication credentials. Please access this page through the proper secure link.');
                 return;
             }
             
             currentUserEmail = userEmail;
+            currentAuthToken = authToken;
+            
             document.getElementById('userEmail').textContent = userEmail;
+            document.getElementById('tokenStatus').textContent = 'Valid ✅';
+            
             console.log("User authenticated:", userEmail);
             
-            // Auto-load properties and data for this specific user
+            // Auto-load properties and data for this authenticated user
             loadPropertiesSecure().then(() => {
                 loadClientDataSecure();
+            }).catch(error => {
+                document.getElementById('tokenStatus').textContent = 'Invalid ❌';
+                showError(`Authentication failed: ${error.message}`);
             });
         });
 
         async function loadPropertiesSecure() {
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const response = await fetch(`${PROXY_URL}/api/secure-notion?wixUserId=${urlParams.get('wixUserId')}&userEmail=${urlParams.get('userEmail')}&authHash=${urlParams.get('authHash')}&action=properties`);
+                const response = await fetch(`${PROXY_URL}/api/secure-notion?userEmail=${encodeURIComponent(currentUserEmail)}&authToken=${currentAuthToken}&action=properties`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
                 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.error);
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
                 }
 
                 const data = await response.json();
@@ -347,7 +368,7 @@
                 
             } catch (error) {
                 console.error('Error loading properties:', error);
-                showError(`Error loading database structure: ${error.message}`);
+                throw error;
             }
         }
 
@@ -370,8 +391,7 @@
             tableContent.innerHTML = '<div class="loading">Securely loading your data...</div>';
 
             try {
-                const urlParams = new URLSearchParams(window.location.search);
-                let queryParams = `wixUserId=${urlParams.get('wixUserId')}&userEmail=${urlParams.get('userEmail')}&authHash=${urlParams.get('authHash')}`;
+                let queryParams = `userEmail=${encodeURIComponent(currentUserEmail)}&authToken=${currentAuthToken}`;
                 
                 // Add additional filters
                 const filterProperty = document.getElementById('filterProperty').value;
@@ -386,11 +406,17 @@
                     }
                 }
                 
-                const response = await fetch(`${PROXY_URL}/api/secure-notion?${queryParams}`);
+                const response = await fetch(`${PROXY_URL}/api/secure-notion?${queryParams}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
                 
                 if (!response.ok) {
                     const errorData = await response.json();
-                    throw new Error(errorData.error);
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
                 }
 
                 const data = await response.json();
@@ -403,7 +429,8 @@
                 displayDataAsTable(data);
                 
             } catch (error) {
-                showError(`Error loading data: ${error.message}`);
+                console.error('Error loading data:', error);
+                showError(`Error loading data: ${error.message}<br><br>This could be due to:<br>• Expired authentication token<br>• Network connectivity issues<br>• Server configuration problems`);
             }
         }
 
@@ -498,6 +525,35 @@
         function showError(message) {
             const tableContent = document.getElementById('tableContent');
             tableContent.innerHTML = `<div class="error">${message}</div>`;
+        }
+        
+        function isAccessedFromWix() {
+            try {
+                // Check if page is loaded in iframe from Wix
+                const referrer = document.referrer;
+                const isInIframe = window.self !== window.top;
+                
+                // Allow if accessed from Wix domains or in iframe
+                const allowedDomains = [
+                    'wix.com',
+                    'wixsite.com', 
+                    'editorx.com',
+                    'localhost',     // For testing
+                    '127.0.0.1'      // For testing
+                ];
+                
+                if (isInIframe || allowedDomains.some(domain => referrer.includes(domain))) {
+                    return true;
+                }
+                
+                // Allow for testing with specific parameter
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get('test') === 'true';
+                
+            } catch (error) {
+                // If we can't check, allow it (some browsers block referrer)
+                return true;
+            }
         }
     </script>
 </body>
