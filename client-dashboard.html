@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .client-name {
+            font-size: 28px;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .dashboard-subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            margin: 10px 0 0 0;
+        }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .controls h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .input-group label {
+            font-weight: 500;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        
+        .form-input {
+            padding: 10px 12px;
+            border: 2px solid #e1e8ed;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 10px;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+            transform: translateY(-1px);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .table-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+            color: #333;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        .data-table th {
+            background: #f8f9fa;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
+        }
+        
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .tag {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            display: inline-block;
+            margin: 2px;
+        }
+        
+        .status {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        .status.not-started { background: #f8f9fa; color: #6c757d; }
+        .status.in-progress { background: #fff3cd; color: #856404; }
+        .status.completed { background: #d4edda; color: #155724; }
+        .status.on-hold { background: #f8d7da; color: #721c24; }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+            font-size: 16px;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #721c24;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            margin: 20px;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+        }
+        
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+        
+        .refresh-btn:hover {
+            background: #5a6fd8;
+            transform: scale(1.1);
+        }
+        
+        @media (max-width: 768px) {
+            .filter-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .data-table {
+                font-size: 12px;
+            }
+            
+            .data-table th,
+            .data-table td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <h1 class="client-name" id="clientDisplay">Client Dashboard</h1>
+        <p class="dashboard-subtitle">Your personalized data view</p>
+    </div>
+
+    <div class="controls">
+        <h3>Configuration</h3>
+        <div class="filter-grid">
+            <div class="input-group">
+                <label for="clientName">Client Name:</label>
+                <input type="text" id="clientName" class="form-input" placeholder="Enter your client name">
+            </div>
+            <div class="input-group">
+                <label for="token">Access Token:</label>
+                <input type="password" id="token" class="form-input" placeholder="Integration token">
+            </div>
+            <div class="input-group">
+                <label for="databaseId">Database ID:</label>
+                <input type="text" id="databaseId" class="form-input" placeholder="32-character database ID">
+            </div>
+        </div>
+        
+        <h3>Filters (Optional)</h3>
+        <div class="filter-grid">
+            <div class="input-group">
+                <label for="filterProperty">Filter Property:</label>
+                <select id="filterProperty" class="form-input">
+                    <option value="">No additional filter</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="filterCondition">Condition:</label>
+                <select id="filterCondition" class="form-input">
+                    <option value="equals">Equals</option>
+                    <option value="contains">Contains</option>
+                    <option value="checkbox">Is checked</option>
+                </select>
+            </div>
+            <div class="input-group">
+                <label for="filterValue">Value:</label>
+                <input type="text" id="filterValue" class="form-input" placeholder="Filter value">
+            </div>
+        </div>
+        
+        <div style="margin-top: 20px;">
+            <button onclick="loadProperties()" class="btn btn-secondary">Load Properties</button>
+            <button onclick="loadClientData()" class="btn btn-primary">Load My Data</button>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div class="table-header">
+            <h2 class="table-title">Your Data</h2>
+        </div>
+        
+        <div id="tableContent">
+            <div class="loading">
+                Configure your settings above and click "Load My Data" to begin
+            </div>
+        </div>
+    </div>
+    
+    <button class="refresh-btn" onclick="loadClientData()" title="Refresh Data">
+        ↻
+    </button>
+
+    <script>
+        // Configuration - Replace with your Vercel URL
+        const PROXY_URL = 'https://YOUR-VERCEL-URL.vercel.app';
+        
+        // IMPORTANT: Replace YOUR-VERCEL-URL with your actual Vercel deployment URL
+        // Example: https://notion-database-proxy-abc123.vercel.app
+        
+        let currentClient = '';
+        let currentToken = '';
+        let currentDatabaseId = '';
+
+        // Auto-populate client name from URL parameter (for Wix integration)
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const clientFromUrl = urlParams.get('client');
+            if (clientFromUrl) {
+                document.getElementById('clientName').value = decodeURIComponent(clientFromUrl);
+                document.getElementById('clientDisplay').textContent = `${decodeURIComponent(clientFromUrl)} Dashboard`;
+            }
+        });
+
+        async function loadProperties() {
+            const token = document.getElementById('token').value;
+            const databaseId = document.getElementById('databaseId').value;
+            
+            if (!token || !databaseId) {
+                showError('Please enter token and database ID first');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${PROXY_URL}/api/notion?databaseId=${databaseId}&token=${token}&action=properties`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error);
+                }
+
+                const data = await response.json();
+                populateFilterOptions(data.properties);
+                
+            } catch (error) {
+                showError(`Error loading properties: ${error.message}`);
+            }
+        }
+
+        function populateFilterOptions(properties) {
+            const filterSelect = document.getElementById('filterProperty');
+            filterSelect.innerHTML = '<option value="">No additional filter</option>';
+            
+            Object.entries(properties).forEach(([name, property]) => {
+                if (name !== 'Client' && !['relation', 'rollup', 'formula'].includes(property.type)) {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = `${name} (${property.type})`;
+                    filterSelect.appendChild(option);
+                }
+            });
+        }
+
+        async function loadClientData() {
+            currentClient = document.getElementById('clientName').value.trim();
+            currentToken = document.getElementById('token').value;
+            currentDatabaseId = document.getElementById('databaseId').value;
+            
+            if (!currentClient || !currentToken || !currentDatabaseId) {
+                showError('Please fill in all required fields: Client Name, Token, and Database ID');
+                return;
+            }
+
+            // Update header
+            document.getElementById('clientDisplay').textContent = `${currentClient} Dashboard`;
+            
+            const tableContent = document.getElementById('tableContent');
+            tableContent.innerHTML = '<div class="loading">Loading your data...</div>';
+
+            try {
+                let queryParams = `databaseId=${currentDatabaseId}&token=${currentToken}&clientName=${encodeURIComponent(currentClient)}`;
+                
+                // Add additional filters
+                const filterProperty = document.getElementById('filterProperty').value;
+                const filterCondition = document.getElementById('filterCondition').value;
+                const filterValue = document.getElementById('filterValue').value;
+                
+                if (filterProperty && filterCondition) {
+                    queryParams += `&filterProperty=${encodeURIComponent(filterProperty)}`;
+                    queryParams += `&filterCondition=${encodeURIComponent(filterCondition)}`;
+                    if (filterValue) {
+                        queryParams += `&filterValue=${encodeURIComponent(filterValue)}`;
+                    }
+                }
+                
+                const response = await fetch(`${PROXY_URL}/api/notion?${queryParams}`);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error);
+                }
+
+                const data = await response.json();
+                displayDataAsTable(data);
+                
+            } catch (error) {
+                showError(`Error loading data: ${error.message}`);
+            }
+        }
+
+        function displayDataAsTable(data) {
+            const tableContent = document.getElementById('tableContent');
+            
+            if (!data.results || data.results.length === 0) {
+                tableContent.innerHTML = `
+                    <div class="no-data">
+                        <h3>No data found for ${currentClient}</h3>
+                        <p>Make sure the client name matches exactly what's in your Notion database.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // Get all unique properties from the results
+            const allProperties = new Set();
+            data.results.forEach(record => {
+                Object.keys(record.properties).forEach(prop => {
+                    if (prop !== 'Client') { // Hide client column since it's always the same
+                        allProperties.add(prop);
+                    }
+                });
+            });
+
+            let html = `
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+            `;
+
+            // Create headers
+            Array.from(allProperties).forEach(prop => {
+                html += `<th>${prop}</th>`;
+            });
+            html += `</tr></thead><tbody>`;
+
+            // Create rows
+            data.results.forEach(record => {
+                html += '<tr>';
+                Array.from(allProperties).forEach(prop => {
+                    const property = record.properties[prop];
+                    const value = property ? getPropertyValue(property) : '';
+                    html += `<td>${value}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            tableContent.innerHTML = html;
+        }
+
+        function getPropertyValue(property) {
+            switch (property.type) {
+                case 'title':
+                    return property.title.map(t => t.plain_text).join('');
+                case 'rich_text':
+                    return property.rich_text.map(t => t.plain_text).join('');
+                case 'number':
+                    return property.number || '';
+                case 'select':
+                    return property.select ? `<span class="tag">${property.select.name}</span>` : '';
+                case 'multi_select':
+                    return property.multi_select.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
+                case 'date':
+                    return property.date ? new Date(property.date.start).toLocaleDateString() : '';
+                case 'checkbox':
+                    return property.checkbox ? '✅' : '❌';
+                case 'url':
+                    return property.url ? `<a href="${property.url}" target="_blank" style="color: #667eea;">Link</a>` : '';
+                case 'email':
+                    return property.email ? `<a href="mailto:${property.email}" style="color: #667eea;">${property.email}</a>` : '';
+                case 'phone_number':
+                    return property.phone_number || '';
+                case 'status':
+                    if (property.status) {
+                        const status = property.status.name.toLowerCase().replace(/\s+/g, '-');
+                        return `<span class="status ${status}">${property.status.name}</span>`;
+                    }
+                    return '';
+                case 'people':
+                    return property.people.map(person => person.name).join(', ');
+                default:
+                    return '';
+            }
+        }
+
+        function showError(message) {
+            const tableContent = document.getElementById('tableContent');
+            tableContent.innerHTML = `<div class="error">${message}</div>`;
+        }
+    </script>
+</body>
+</html>
