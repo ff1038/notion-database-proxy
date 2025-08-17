@@ -1,4 +1,4 @@
-// api/notion.js - Secure client-specific version
+// api/notion.js - Auto-loading with environment variables
 export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -10,28 +10,25 @@ export default async function handler(req, res) {
     return;
   }
   
+  // Get credentials from environment variables (secure)
+  const NOTION_TOKEN = process.env.NOTION_TOKEN;
+  const DATABASE_ID = process.env.NOTION_DATABASE_ID;
+  
+  if (!NOTION_TOKEN || !DATABASE_ID) {
+    return res.status(500).json({ 
+      error: 'Server configuration error: Missing credentials' 
+    });
+  }
+  
   // Get parameters
-  const { databaseId, token, clientName, action } = req.query;
-  
-  if (!databaseId || !token) {
-    return res.status(400).json({ 
-      error: 'Missing databaseId or token parameters' 
-    });
-  }
-  
-  // For client-specific queries, clientName is required
-  if (!action && !clientName) {
-    return res.status(400).json({ 
-      error: 'Client name is required for data access' 
-    });
-  }
+  const { clientName, action } = req.query;
   
   try {
     if (action === 'properties') {
       // Get database schema
-      const response = await fetch(`https://api.notion.com/v1/databases/${databaseId}`, {
+      const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${NOTION_TOKEN}`,
           'Notion-Version': '2022-06-28'
         }
       });
@@ -44,6 +41,13 @@ export default async function handler(req, res) {
       res.status(200).json(data);
       
     } else {
+      // For client data queries, clientName is required
+      if (!clientName) {
+        return res.status(400).json({ 
+          error: 'Client name is required for data access' 
+        });
+      }
+      
       // Query database with MANDATORY client filter
       const requestBody = {
         page_size: 100,
@@ -55,7 +59,7 @@ export default async function handler(req, res) {
         }
       };
       
-      // Add additional filters if provided (combined with client filter)
+      // Add additional filters if provided
       const { filterProperty, filterCondition, filterValue } = req.query;
       if (filterProperty && filterCondition && filterProperty !== "Client") {
         const additionalFilter = buildFilter(filterProperty, filterCondition, filterValue);
@@ -76,10 +80,20 @@ export default async function handler(req, res) {
         }];
       }
       
-      const response = await fetch(`https://api.notion.com/v1/databases/${databaseId}/query`, {
+      // Add column selection if provided
+      const { columns } = req.query;
+      if (columns) {
+        // Parse column list (comma-separated)
+        const columnList = columns.split(',').map(col => col.trim());
+        // Note: Notion API doesn't support selecting specific properties in query,
+        // but we'll filter on the response side
+        requestBody._selectedColumns = columnList;
+      }
+      
+      const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${NOTION_TOKEN}`,
           'Notion-Version': '2022-06-28',
           'Content-Type': 'application/json'
         },
@@ -100,8 +114,36 @@ export default async function handler(req, res) {
           if (clientProperty && clientProperty.select) {
             return clientProperty.select.name === clientName;
           }
-          return false; // Exclude records without proper client assignment
+          return false;
         });
+        
+        // Filter columns if specified
+        if (columns) {
+          const columnList = columns.split(',').map(col => col.trim());
+          data.results = data.results.map(record => {
+            const filteredRecord = {
+              id: record.id,
+              properties: {}
+            };
+            
+            // Always include Client column for security
+            if (record.properties.Client) {
+              filteredRecord.properties.Client = record.properties.Client;
+            }
+            
+            // Include only requested columns
+            columnList.forEach(col => {
+              if (record.properties[col]) {
+                filteredRecord.properties[col] = record.properties[col];
+              }
+            });
+            
+            return filteredRecord;
+          });
+          
+          // Add column order information to response
+          data._columnOrder = columnList;
+        }
       }
       
       res.status(200).json(data);
@@ -123,7 +165,6 @@ function buildFilter(property, condition, value) {
   
   switch (condition) {
     case 'equals':
-      // Handle different property types
       if (property.toLowerCase().includes('date')) {
         filter.date = { equals: value };
       } else if (property.toLowerCase().includes('number') || property.toLowerCase().includes('price')) {
@@ -132,35 +173,21 @@ function buildFilter(property, condition, value) {
         filter.rich_text = { equals: value };
       }
       break;
-      
     case 'contains':
       filter.rich_text = { contains: value };
       break;
-      
-    case 'does_not_contain':
-      filter.rich_text = { does_not_contain: value };
-      break;
-      
-    case 'starts_with':
-      filter.rich_text = { starts_with: value };
-      break;
-      
     case 'checkbox':
       filter.checkbox = { equals: true };
       break;
-      
     case 'not_checkbox':
       filter.checkbox = { equals: false };
       break;
-      
     case 'is_empty':
       filter.rich_text = { is_empty: true };
       break;
-      
     case 'is_not_empty':
       filter.rich_text = { is_not_empty: true };
       break;
-      
     default:
       filter.rich_text = { contains: value };
   }
