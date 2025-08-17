@@ -1,4 +1,4 @@
-// api/secure-notion.js - Secure user-specific API
+// api/secure-notion.js - Secure version for separate pages
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -18,11 +18,15 @@ export default async function handler(req, res) {
   }
   
   // Get parameters
-  const { wixUserId, userEmail, authHash, action } = req.query;
+  const { userEmail, authToken, action } = req.query;
   
-  // SECURITY: Verify the request comes from authorized user
-  if (!verifyUserAuth(wixUserId, userEmail, authHash, AUTH_SECRET)) {
-    return res.status(401).json({ error: 'Unauthorized access' });
+  if (!userEmail || !authToken) {
+    return res.status(400).json({ error: 'Missing userEmail or authToken' });
+  }
+  
+  // SECURITY: Verify the authentication token
+  if (!verifyAuthToken(authToken, userEmail, AUTH_SECRET)) {
+    return res.status(401).json({ error: 'Invalid authentication token' });
   }
   
   // SECURITY: Get the client name for this specific user
@@ -98,35 +102,46 @@ export default async function handler(req, res) {
   }
 }
 
-function verifyUserAuth(wixUserId, userEmail, authHash, secret) {
+function verifyAuthToken(authToken, userEmail, secret) {
   try {
-    const crypto = require('crypto');
-    const timestamp = Math.floor(Date.now() / (1000 * 60 * 15)); // 15-minute window
-    const expectedHash = crypto
-      .createHmac('sha256', secret)
-      .update(`${wixUserId}:${userEmail}:${timestamp}`)
-      .digest('hex');
+    // Verify the token matches what we expect for this user
+    const timestamp = Math.floor(Date.now() / (1000 * 60 * 30)); // 30-minute window
+    const expectedToken = generateAuthToken(userEmail, timestamp, secret);
     
-    return authHash === expectedHash;
+    // Also check previous time window for clock drift
+    const previousTimestamp = timestamp - 1;
+    const previousToken = generateAuthToken(userEmail, previousTimestamp, secret);
+    
+    return authToken === expectedToken || authToken === previousToken;
   } catch (error) {
+    console.error('Token verification error:', error);
     return false;
   }
+}
+
+function generateAuthToken(userEmail, timestamp, secret) {
+  // Simple but secure token generation
+  const crypto = require('crypto');
+  const payload = `${userEmail}:${timestamp}:${secret}`;
+  return crypto.createHash('sha256').update(payload).digest('hex').substring(0, 16);
 }
 
 function getClientForUser(userEmail) {
   // SECURE SERVER-SIDE MAPPING - Update these with your actual user emails
   const userClientMap = {
-    'nick@sayshey.com': 'King Ed',           // Replace with actual email
-    'mrkieranbeardmore@gmail.com': 'Kieran "KES" Beardmore',      // Replace with actual email  
-    'willvrocks@gmail.com': 'Will Vaughan',     // Replace with actual email
-    'lindenjaymusic@gmail.com': 'Linden Jay',     // Replace with actual email 
-    'nick@fastfriends.co': 'Admin',           // Admin user
+    'nick@sayshey.com': 'King Ed',
+    'nicksayshey@gmai.com': 'Linden Jay',      
+    'client.b@business.com': 'Client B',
     
     // Add more user-to-client mappings here:
     // 'user@email.com': 'Client Name',
   };
   
-  return userClientMap[userEmail.toLowerCase()] || null;
+  console.log(`Looking up client for user: ${userEmail}`);
+  const client = userClientMap[userEmail?.toLowerCase()] || null;
+  console.log(`Found client: ${client}`);
+  
+  return client;
 }
 
 function buildFilter(property, condition, value) {
@@ -136,15 +151,3 @@ function buildFilter(property, condition, value) {
     case 'equals':
       filter.rich_text = { equals: value };
       break;
-    case 'contains':
-      filter.rich_text = { contains: value };
-      break;
-    case 'checkbox':
-      filter.checkbox = { equals: true };
-      break;
-    default:
-      filter.rich_text = { contains: value };
-  }
-  
-  return filter;
-}
