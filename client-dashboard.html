@@ -46,6 +46,72 @@
             color: #333;
         }
         
+        .column-config {
+            margin-bottom: 20px;
+        }
+        
+        .column-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .column-item {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .column-item.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .column-item:hover {
+            border-color: #667eea;
+        }
+        
+        .column-order {
+            background: #f8f9fa;
+            border: 1px dashed #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            min-height: 50px;
+            margin-top: 10px;
+        }
+        
+        .column-order-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 8px 12px;
+            margin: 5px;
+            display: inline-block;
+            cursor: move;
+            position: relative;
+        }
+        
+        .column-order-item .remove-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+        
         .filter-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -113,6 +179,9 @@
             background: #f8f9fa;
             padding: 20px;
             border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .table-title {
@@ -122,8 +191,15 @@
             color: #333;
         }
         
+        .record-count {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
         .table-wrapper {
             overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
         }
         
         .data-table {
@@ -201,6 +277,15 @@
             color: #6c757d;
         }
         
+        .auto-load-indicator {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+        
         .refresh-btn {
             position: fixed;
             bottom: 30px;
@@ -227,6 +312,10 @@
                 grid-template-columns: 1fr;
             }
             
+            .column-list {
+                flex-direction: column;
+            }
+            
             .data-table {
                 font-size: 12px;
             }
@@ -244,24 +333,26 @@
         <p class="dashboard-subtitle">Your personalized data view</p>
     </div>
 
+    <div id="autoLoadIndicator" class="auto-load-indicator" style="display: none;">
+        ✅ Auto-loading enabled - No credentials needed!
+    </div>
+
     <div class="controls">
-        <h3>Configuration</h3>
-        <div class="filter-grid">
-            <div class="input-group">
-                <label for="clientName">Client Name:</label>
-                <input type="text" id="clientName" class="form-input" placeholder="Enter your client name">
+        <h3>📊 Customize Your View</h3>
+        
+        <div class="column-config">
+            <label><strong>Available Columns:</strong> (Click to select/deselect)</label>
+            <div id="availableColumns" class="column-list">
+                <!-- Populated dynamically -->
             </div>
-            <div class="input-group">
-                <label for="token">Access Token:</label>
-                <input type="password" id="token" class="form-input" placeholder="Integration token">
-            </div>
-            <div class="input-group">
-                <label for="databaseId">Database ID:</label>
-                <input type="text" id="databaseId" class="form-input" placeholder="32-character database ID">
+            
+            <label><strong>Column Order:</strong> (Drag to reorder)</label>
+            <div id="columnOrder" class="column-order">
+                <p style="color: #6c757d; margin: 0;">Select columns above to customize your view</p>
             </div>
         </div>
         
-        <h3>Filters (Optional)</h3>
+        <h3>🔍 Filters (Optional)</h3>
         <div class="filter-grid">
             <div class="input-group">
                 <label for="filterProperty">Filter Property:</label>
@@ -284,19 +375,20 @@
         </div>
         
         <div style="margin-top: 20px;">
-            <button onclick="loadProperties()" class="btn btn-secondary">Load Properties</button>
-            <button onclick="loadClientData()" class="btn btn-primary">Load My Data</button>
+            <button onclick="loadProperties()" class="btn btn-secondary">Load Available Columns</button>
+            <button onclick="loadClientData()" class="btn btn-primary">Refresh Data</button>
         </div>
     </div>
 
     <div class="table-container">
         <div class="table-header">
             <h2 class="table-title">Your Data</h2>
+            <span id="recordCount" class="record-count"></span>
         </div>
         
         <div id="tableContent">
             <div class="loading">
-                Configure your settings above and click "Load My Data" to begin
+                Loading your data automatically...
             </div>
         </div>
     </div>
@@ -309,34 +401,35 @@
         // Configuration - Replace with your Vercel URL
         const PROXY_URL = 'https://notion-database-proxy.vercel.app';
         
-        // IMPORTANT: Replace YOUR-VERCEL-URL with your actual Vercel deployment URL
-        // Example: https://notion-database-proxy-abc123.vercel.app
-        
         let currentClient = '';
-        let currentToken = '';
-        let currentDatabaseId = '';
+        let availableProperties = {};
+        let selectedColumns = [];
 
-        // Auto-populate client name from URL parameter (for Wix integration)
+        // Auto-load on page load
         window.addEventListener('load', function() {
+            // Show auto-load indicator
+            document.getElementById('autoLoadIndicator').style.display = 'block';
+            
+            // Get client name from URL parameter
             const urlParams = new URLSearchParams(window.location.search);
             const clientFromUrl = urlParams.get('client');
+            
             if (clientFromUrl) {
-                document.getElementById('clientName').value = decodeURIComponent(clientFromUrl);
-                document.getElementById('clientDisplay').textContent = `${decodeURIComponent(clientFromUrl)} Dashboard`;
+                currentClient = decodeURIComponent(clientFromUrl);
+                document.getElementById('clientDisplay').textContent = `${currentClient} Dashboard`;
+                
+                // Auto-load properties and data
+                loadProperties().then(() => {
+                    loadClientData();
+                });
+            } else {
+                showError('No client specified. Please access this page through the proper link.');
             }
         });
 
         async function loadProperties() {
-            const token = document.getElementById('token').value;
-            const databaseId = document.getElementById('databaseId').value;
-            
-            if (!token || !databaseId) {
-                showError('Please enter token and database ID first');
-                return;
-            }
-
             try {
-                const response = await fetch(`${PROXY_URL}/api/notion?databaseId=${databaseId}&token=${token}&action=properties`);
+                const response = await fetch(`${PROXY_URL}/api/notion?action=properties`);
                 
                 if (!response.ok) {
                     const errorData = await response.json();
@@ -344,18 +437,39 @@
                 }
 
                 const data = await response.json();
-                populateFilterOptions(data.properties);
+                availableProperties = data.properties;
+                populateColumnOptions();
+                populateFilterOptions();
                 
             } catch (error) {
-                showError(`Error loading properties: ${error.message}`);
+                console.error('Error loading properties:', error);
+                showError(`Error loading database structure: ${error.message}`);
             }
         }
 
-        function populateFilterOptions(properties) {
+        function populateColumnOptions() {
+            const container = document.getElementById('availableColumns');
+            container.innerHTML = '';
+            
+            Object.entries(availableProperties).forEach(([name, property]) => {
+                if (name !== 'Client') { // Hide client column
+                    const item = document.createElement('div');
+                    item.className = 'column-item';
+                    item.innerHTML = `
+                        <span>${name}</span>
+                        <small style="opacity: 0.7;">(${property.type})</small>
+                    `;
+                    item.onclick = () => toggleColumn(name, item);
+                    container.appendChild(item);
+                }
+            });
+        }
+
+        function populateFilterOptions() {
             const filterSelect = document.getElementById('filterProperty');
             filterSelect.innerHTML = '<option value="">No additional filter</option>';
             
-            Object.entries(properties).forEach(([name, property]) => {
+            Object.entries(availableProperties).forEach(([name, property]) => {
                 if (name !== 'Client' && !['relation', 'rollup', 'formula'].includes(property.type)) {
                     const option = document.createElement('option');
                     option.value = name;
@@ -365,24 +479,92 @@
             });
         }
 
-        async function loadClientData() {
-            currentClient = document.getElementById('clientName').value.trim();
-            currentToken = document.getElementById('token').value;
-            currentDatabaseId = document.getElementById('databaseId').value;
+        function toggleColumn(columnName, element) {
+            const index = selectedColumns.indexOf(columnName);
             
-            if (!currentClient || !currentToken || !currentDatabaseId) {
-                showError('Please fill in all required fields: Client Name, Token, and Database ID');
+            if (index > -1) {
+                // Remove column
+                selectedColumns.splice(index, 1);
+                element.classList.remove('selected');
+            } else {
+                // Add column
+                selectedColumns.push(columnName);
+                element.classList.add('selected');
+            }
+            
+            updateColumnOrder();
+        }
+
+        function updateColumnOrder() {
+            const container = document.getElementById('columnOrder');
+            
+            if (selectedColumns.length === 0) {
+                container.innerHTML = '<p style="color: #6c757d; margin: 0;">Select columns above to customize your view</p>';
+                return;
+            }
+            
+            container.innerHTML = '';
+            selectedColumns.forEach((col, index) => {
+                const item = document.createElement('div');
+                item.className = 'column-order-item';
+                item.draggable = true;
+                item.innerHTML = `
+                    ${col}
+                    <button class="remove-btn" onclick="removeColumn('${col}')" title="Remove column">×</button>
+                `;
+                
+                // Add drag and drop functionality
+                item.ondragstart = (e) => e.dataTransfer.setData('text/plain', index);
+                item.ondragover = (e) => e.preventDefault();
+                item.ondrop = (e) => {
+                    e.preventDefault();
+                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    const toIndex = index;
+                    
+                    if (fromIndex !== toIndex) {
+                        const item = selectedColumns.splice(fromIndex, 1)[0];
+                        selectedColumns.splice(toIndex, 0, item);
+                        updateColumnOrder();
+                    }
+                };
+                
+                container.appendChild(item);
+            });
+        }
+
+        function removeColumn(columnName) {
+            const index = selectedColumns.indexOf(columnName);
+            if (index > -1) {
+                selectedColumns.splice(index, 1);
+                
+                // Update UI
+                const columnItems = document.querySelectorAll('.column-item');
+                columnItems.forEach(item => {
+                    if (item.textContent.includes(columnName)) {
+                        item.classList.remove('selected');
+                    }
+                });
+                
+                updateColumnOrder();
+            }
+        }
+
+        async function loadClientData() {
+            if (!currentClient) {
+                showError('No client name available. Please check the URL.');
                 return;
             }
 
-            // Update header
-            document.getElementById('clientDisplay').textContent = `${currentClient} Dashboard`;
-            
             const tableContent = document.getElementById('tableContent');
             tableContent.innerHTML = '<div class="loading">Loading your data...</div>';
 
             try {
-                let queryParams = `databaseId=${currentDatabaseId}&token=${currentToken}&clientName=${encodeURIComponent(currentClient)}`;
+                let queryParams = `clientName=${encodeURIComponent(currentClient)}`;
+                
+                // Add column selection if any columns are selected
+                if (selectedColumns.length > 0) {
+                    queryParams += `&columns=${selectedColumns.map(col => encodeURIComponent(col)).join(',')}`;
+                }
                 
                 // Add additional filters
                 const filterProperty = document.getElementById('filterProperty').value;
@@ -414,6 +596,7 @@
 
         function displayDataAsTable(data) {
             const tableContent = document.getElementById('tableContent');
+            const recordCount = document.getElementById('recordCount');
             
             if (!data.results || data.results.length === 0) {
                 tableContent.innerHTML = `
@@ -422,18 +605,18 @@
                         <p>Make sure the client name matches exactly what's in your Notion database.</p>
                     </div>
                 `;
+                recordCount.textContent = '0 records';
                 return;
             }
 
-            // Get all unique properties from the results
-            const allProperties = new Set();
-            data.results.forEach(record => {
-                Object.keys(record.properties).forEach(prop => {
-                    if (prop !== 'Client') { // Hide client column since it's always the same
-                        allProperties.add(prop);
-                    }
-                });
-            });
+            recordCount.textContent = `${data.results.length} record${data.results.length !== 1 ? 's' : ''}`;
+
+            // Use column order from response or selected columns
+            const columnsToShow = data._columnOrder || selectedColumns;
+            
+            // If no specific columns selected, show all except Client
+            const finalColumns = columnsToShow.length > 0 ? columnsToShow : 
+                Object.keys(data.results[0].properties).filter(col => col !== 'Client');
 
             let html = `
                 <div class="table-wrapper">
@@ -442,17 +625,17 @@
                             <tr>
             `;
 
-            // Create headers
-            Array.from(allProperties).forEach(prop => {
-                html += `<th>${prop}</th>`;
+            // Create headers in specified order
+            finalColumns.forEach(col => {
+                html += `<th>${col}</th>`;
             });
             html += `</tr></thead><tbody>`;
 
             // Create rows
             data.results.forEach(record => {
                 html += '<tr>';
-                Array.from(allProperties).forEach(prop => {
-                    const property = record.properties[prop];
+                finalColumns.forEach(col => {
+                    const property = record.properties[col];
                     const value = property ? getPropertyValue(property) : '';
                     html += `<td>${value}</td>`;
                 });
