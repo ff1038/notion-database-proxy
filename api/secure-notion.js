@@ -116,7 +116,7 @@ function verifyUserAuth(wixUserId, userEmail, authHash, secret) {
 function getClientForUser(userEmail) {
   // SECURE SERVER-SIDE MAPPING - Update these with your actual user emails
   const userClientMap = {
-    'edcarlile@me.com': 'King Ed',           // Replace with actual email
+    'nick@sayshey.com': 'King Ed',           // Replace with actual email
     'mrkieranbeardmore@gmail.com': 'Kieran "KES" Beardmore',      // Replace with actual email  
     'willvrocks@gmail.com': 'Will Vaughan',     // Replace with actual email
     'lindenjaymusic@gmail.com': 'Linden Jay',     // Replace with actual email 
