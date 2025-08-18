@@ -673,7 +673,9 @@
             
             // Create rows
             pageData.forEach((record, index) => {
-                const isVoided = record.properties['VOID?']?.checkbox === true;
+                // Check if VOID field exists and handle gracefully
+                const voidProperty = record.properties['VOID?'];
+                const isVoided = voidProperty ? voidProperty?.checkbox === true : false;
                 const rowClass = isVoided ? 'void-row' : '';
                 
                 html += `<tr class="${rowClass}">`;
