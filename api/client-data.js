@@ -1,4 +1,4 @@
-// api/client-data.js - With secure key authentication
+// api/client-data.js - Same columns for all clients
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid access credentials' });
   }
   
-  // Get client for this authenticated user
+  // Get client for this user
   const clientName = getClientForUser(userEmail);
   if (!clientName) {
     return res.status(403).json({ error: 'No client access for user: ' + userEmail });
@@ -62,10 +62,33 @@ export default async function handler(req, res) {
     
     const data = await response.json();
     
+    // Apply universal column configuration
+    const columnConfig = getUniversalColumnConfig();
+    
+    if (data.results && columnConfig.columns) {
+      data.results = data.results.map(record => {
+        const filteredRecord = {
+          id: record.id,
+          properties: {}
+        };
+        
+        // Add properties in the specified order
+        columnConfig.columns.forEach(columnName => {
+          if (record.properties[columnName]) {
+            filteredRecord.properties[columnName] = record.properties[columnName];
+          }
+        });
+        
+        return filteredRecord;
+      });
+    }
+    
     res.status(200).json({
       ...data,
       authorizedClient: clientName,
-      userEmail: userEmail
+      userEmail: userEmail,
+      columnOrder: columnConfig.columns,
+      columnHeaders: columnConfig.columnHeaders
     });
     
   } catch (error) {
@@ -74,45 +97,47 @@ export default async function handler(req, res) {
   }
 }
 
-function verifySecureKey(userEmail, secureKey, timestamp) {
-  try {
-    // Define secure keys for each user
-    const userSecureKeys = {
-      'nick@sayshey.com': 'ke-' + Buffer.from('king-ed-2025').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
-      'client.a@company.com': 'ca-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
-      'client.b@business.com': 'cb-' + Buffer.from('client-b-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
-      // Add more clients here with unique keys
-    };
+function getUniversalColumnConfig() {
+  // Define the columns and headers that ALL clients will see
+  return {
+    columns: [
+      'Invoice date',           // Adjust these to match your actual Notion columns
+      'Inv #',
+      'Vendor',
+      'Description',
+      'Income Type',
+      'Net',
+      'Gross',
+      'Currency',
+      'Paid in date',
+      'Amount Received',
+      'Currency (receipt)',
+      'Adjustments',
+      'Net Commissionable',
+      'Commission %',
+      'Mgmt Commission',
+      'Mgmt Inv #'
+    ],
+    columnHeaders: {
+      'Name': 'Date (Inv/Stmt)',
+      'Date Created': 'Invoice #',
+      'Priority': 'Vendor',
+      'Description': 'Description',
+      'Assigned To': 'Income Type',
+      'Assigned To': 'Net Amount',
+      'Assigned To': 'Gross Amount',
+      'Assigned To': 'Currency (Inv/Stmt)',
+      'Assigned To': 'Paid In Date',
+      'Assigned To': 'Amount Received',
+      'Assigned To': 'Currency (Received)',
+      'Assigned To': 'Adjustments',
+      'Assigned To': 'Net Commissionable',
+      'Assigned To': 'Commission %',
+      'Assigned To': 'Mgmt Commission',
+      'Assigned To': 'Mgmt Inv #'
     
-    const expectedKey = userSecureKeys[userEmail.toLowerCase()];
-    
-    if (!expectedKey) {
-      console.log('No secure key defined for user:', userEmail);
-      return false;
     }
-    
-    if (secureKey !== expectedKey) {
-      console.log('Secure key mismatch for user:', userEmail);
-      return false;
-    }
-    
-    // Check if timestamp is recent (within 1 hour for security)
-    const now = Math.floor(Date.now() / 1000);
-    const requestTime = parseInt(timestamp);
-    const timeDiff = now - requestTime;
-    
-    if (timeDiff > 3600 || timeDiff < -300) { // 1 hour window, 5 min future tolerance
-      console.log('Timestamp outside valid window');
-      return false;
-    }
-    
-    console.log(`Valid secure access for: ${userEmail}`);
-    return true;
-    
-  } catch (error) {
-    console.error('Secure key verification error:', error);
-    return false;
-  }
+  };
 }
 
 function getClientForUser(userEmail) {
@@ -123,4 +148,34 @@ function getClientForUser(userEmail) {
   };
   
   return userClientMap[userEmail?.toLowerCase()] || null;
+}
+
+function verifySecureKey(userEmail, secureKey, timestamp) {
+  try {
+    const userSecureKeys = {
+      'nick@sayshey.com': 'ke-' + Buffer.from('king-ed-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'client.a@company.com': 'ca-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'client.b@business.com': 'cb-' + Buffer.from('client-b-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+    };
+    
+    const expectedKey = userSecureKeys[userEmail.toLowerCase()];
+    
+    if (!expectedKey || secureKey !== expectedKey) {
+      return false;
+    }
+    
+    const now = Math.floor(Date.now() / 1000);
+    const requestTime = parseInt(timestamp);
+    const timeDiff = now - requestTime;
+    
+    if (timeDiff > 3600 || timeDiff < -300) {
+      return false;
+    }
+    
+    return true;
+    
+  } catch (error) {
+    console.error('Secure key verification error:', error);
+    return false;
+  }
 }
