@@ -1,5 +1,7 @@
-// api/client-data.js - Same columns for all clients
+// api/client-data.js - Minimal version for debugging
 export default async function handler(req, res) {
+  console.log('=== API HANDLER START ===');
+  
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -9,219 +11,117 @@ export default async function handler(req, res) {
     return;
   }
   
-  const NOTION_TOKEN = process.env.NOTION_TOKEN;
-  const DATABASE_ID = process.env.NOTION_DATABASE_ID;
-  
-  if (!NOTION_TOKEN || !DATABASE_ID) {
-    return res.status(500).json({ error: 'Server configuration error' });
-  }
-  
-  const { userEmail, secureKey, timestamp } = req.query;
-  
-  if (!userEmail || !secureKey || !timestamp) {
-    return res.status(401).json({ error: 'Missing authentication parameters' });
-  }
-  
-  // Verify the secure key for this user
-  if (!verifySecureKey(userEmail, secureKey, timestamp)) {
-    return res.status(401).json({ error: 'Invalid access credentials' });
-  }
-  
-  // Get client for this user
-  const clientName = getClientForUser(userEmail);
-  if (!clientName) {
-    return res.status(403).json({ error: 'No client access for user: ' + userEmail });
-  }
-  
   try {
-    // Fetch all records with pagination
-    let allResults = [];
-    let hasMore = true;
-    let nextCursor = null;
+    console.log('1. Checking environment variables...');
+    const NOTION_TOKEN = process.env.NOTION_TOKEN;
+    const DATABASE_ID = process.env.NOTION_DATABASE_ID;
     
-    while (hasMore) {
-      const requestBody = {
-        page_size: 100,
-        filter: {
-          property: "Client",
-          select: {
-            equals: clientName
-          }
-        }
-      };
-      
-      if (nextCursor) {
-        requestBody.start_cursor = nextCursor;
-      }
-      
-      const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${NOTION_TOKEN}`,
-          'Notion-Version': '2022-06-28',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Notion API error: ${response.status}`);
-      }
-      
-      const pageData = await response.json();
-      allResults = [...allResults, ...pageData.results];
-      
-      hasMore = pageData.has_more;
-      nextCursor = pageData.next_cursor;
+    console.log('NOTION_TOKEN exists:', !!NOTION_TOKEN);
+    console.log('DATABASE_ID exists:', !!DATABASE_ID);
+    
+    if (!NOTION_TOKEN || !DATABASE_ID) {
+      console.log('Missing environment variables');
+      return res.status(500).json({ error: 'Server configuration error - missing environment variables' });
     }
     
-    // Create data object with all results
-    const data = { 
-      results: allResults,
-      has_more: false,
-      next_cursor: null
+    console.log('2. Checking request parameters...');
+    const { userEmail, secureKey, timestamp } = req.query;
+    console.log('userEmail:', userEmail);
+    console.log('secureKey exists:', !!secureKey);
+    console.log('timestamp:', timestamp);
+    
+    if (!userEmail || !secureKey || !timestamp) {
+      console.log('Missing authentication parameters');
+      return res.status(401).json({ error: 'Missing authentication parameters' });
+    }
+    
+    console.log('3. Verifying secure key...');
+    if (!verifySecureKey(userEmail, secureKey, timestamp)) {
+      console.log('Invalid secure key');
+      return res.status(401).json({ error: 'Invalid access credentials' });
+    }
+    
+    console.log('4. Getting client for user...');
+    const clientName = getClientForUser(userEmail);
+    console.log('Client name:', clientName);
+    
+    if (!clientName) {
+      console.log('No client found for user');
+      return res.status(403).json({ error: 'No client access for user: ' + userEmail });
+    }
+    
+    console.log('5. Making Notion API request...');
+    const requestBody = {
+      page_size: 10, // Start with just 10 records
+      filter: {
+        property: "Client",
+        select: {
+          equals: clientName
+        }
+      }
     };
     
-    console.log(`Secure access granted: ${clientName}, user: ${userEmail}`);
+    console.log('Request body:', JSON.stringify(requestBody, null, 2));
     
-    // Fetch all records with pagination
-    let allResults = [];
-    let hasMore = true;
-    let nextCursor = null;
+    const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${NOTION_TOKEN}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
     
-    while (hasMore) {
-      const requestBody = {
-        page_size: 100,
-        filter: {
-          property: "Client",
-          select: {
-            equals: clientName
-          }
-        }
-      };
-      
-      if (nextCursor) {
-        requestBody.start_cursor = nextCursor;
-      }
-      
-      const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${NOTION_TOKEN}`,
-          'Notion-Version': '2022-06-28',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(requestBody)
+    console.log('Notion API response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Notion API error response:', errorText);
+      return res.status(500).json({ 
+        error: `Notion API error: ${response.status}`,
+        details: errorText
       });
-      
-      if (!response.ok) {
-        throw new Error(`Notion API error: ${response.status}`);
-      }
-      
-      const pageData = await response.json();
-      allResults = [...allResults, ...pageData.results];
-      
-      hasMore = pageData.has_more;
-      nextCursor = pageData.next_cursor;
     }
     
-    // Create data object with all results
-    const data = { 
-      results: allResults,
-      has_more: false,
-      next_cursor: null
-    };
-
-    // Add this after fetching the main data
-    if (data.results) {
-      // Process relation fields to get more meaningful data
-      data.results = await Promise.all(data.results.map(async (record) => {
-        const processedRecord = { ...record };
-        
-        // Process each property
-        for (const [key, property] of Object.entries(record.properties)) {
-          if (property.type === 'relation' && property.relation.length > 0) {
-            // For relation fields, you could fetch the related page titles
-            // This requires additional API calls, so use sparingly
-            try {
-              const relatedTitles = await Promise.all(
-                property.relation.slice(0, 3).map(async (rel) => { // Limit to first 3
-                  const pageResponse = await fetch(`https://api.notion.com/v1/pages/${rel.id}`, {
-                    headers: {
-                      'Authorization': `Bearer ${NOTION_TOKEN}`,
-                      'Notion-Version': '2022-06-28'
-                    }
-                  });
-                  
-                  if (pageResponse.ok) {
-                    const pageData = await pageResponse.json();
-                    // Extract title from the page
-                    const titleProperty = Object.values(pageData.properties).find(p => p.type === 'title');
-                    if (titleProperty && titleProperty.title.length > 0) {
-                      return titleProperty.title[0].plain_text;
-                    }
-                  }
-                  return 'Related Item';
-                })
-              );
-              
-              // Store the titles in a custom field
-              processedRecord.properties[key].relation_titles = relatedTitles.join(', ') + (property.relation.length > 3 ? '...' : '');
-            } catch (error) {
-              console.error('Error fetching relation data:', error);
-            }
-          }
-        }
-        
-        return processedRecord;
-      }));
-    }
+    const data = await response.json();
+    console.log('6. Retrieved records:', data.results?.length || 0);
     
-    // Apply universal column configuration
+    console.log('7. Applying column configuration...');
     const columnConfig = getUniversalColumnConfig();
     
-    if (data.results && columnConfig.columns) {
-      data.results = data.results.map(record => {
-        const filteredRecord = {
-          id: record.id,
-          properties: {}
-        };
-        
-        // Add properties in the specified order
-        columnConfig.columns.forEach(columnName => {
-          if (record.properties[columnName]) {
-            filteredRecord.properties[columnName] = record.properties[columnName];
-          }
-        });
-        
-        return filteredRecord;
-      });
-    }
-    
+    console.log('8. Sending response...');
     res.status(200).json({
-      ...data,
+      results: data.results,
       authorizedClient: clientName,
       userEmail: userEmail,
       columnOrder: columnConfig.columns,
-      columnHeaders: columnConfig.columnHeaders
+      columnHeaders: columnConfig.columnHeaders,
+      debug: {
+        recordCount: data.results?.length || 0,
+        hasMore: data.has_more,
+        timestamp: new Date().toISOString()
+      }
     });
     
+    console.log('=== API HANDLER SUCCESS ===');
+    
   } catch (error) {
-    console.error('API error details:', error);
+    console.error('=== API HANDLER ERROR ===');
+    console.error('Error type:', error.constructor.name);
     console.error('Error message:', error.message);
     console.error('Error stack:', error.stack);
     
-    // Return a more detailed error response
     res.status(500).json({ 
       error: `Server error: ${error.message}`,
-      details: error.stack,
+      type: error.constructor.name,
+      stack: error.stack,
       timestamp: new Date().toISOString()
     });
   }
 }
 
 function getUniversalColumnConfig() {
-  // Define the columns and headers that ALL clients will see
   return {
     columns: [
       'Invoice date',
