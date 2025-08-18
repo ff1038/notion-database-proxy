@@ -280,7 +280,7 @@
         </div>
         
         <div style="margin-top: 20px;">
-            <button onclick="loadClientDataSecure()" class="btn btn-primary">Apply Filter</button>
+            <button onclick="refreshData()" class="btn btn-primary">Apply Filter</button>
         </div>
     </div>
 
@@ -297,7 +297,7 @@
         </div>
     </div>
     
-    <button class="refresh-btn" onclick="loadClientDataSecure()" title="Refresh Data">
+    <button class="refresh-btn" onclick="refreshData()" title="Refresh Data">
         ↻
     </button>
 
@@ -316,32 +316,146 @@
                 showError('🔒 Access Denied<br><br>This secure dashboard can only be accessed through the official website.<br>Please log in to your account to view your data.');
                 return;
             }
+        }
+        
+        function refreshData() {
+            // Use the appropriate method based on current mode
+            const urlParams = new URLSearchParams(window.location.search);
+            const simpleMode = urlParams.get('simple');
+            
+            if (simpleMode === 'true') {
+                loadClientDataSimple();
+            } else {
+                loadClientDataSecure();
+            }
+        }
+        }
+        
+        async function loadPropertiesSimple() {
+            try {
+                console.log("Loading properties in simplified mode...");
+                const response = await fetch(`${PROXY_URL}/api/secure-simple?userEmail=${encodeURIComponent(currentUserEmail)}&action=properties`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                console.log("Properties response status:", response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("Properties loaded successfully");
+                availableProperties = data.properties;
+                populateFilterOptions();
+                
+                document.getElementById('filterControls').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Error loading properties:', error);
+                throw error;
+            }
+        }
+
+        async function loadClientDataSimple() {
+            const tableContent = document.getElementById('tableContent');
+            tableContent.innerHTML = '<div class="loading">Loading your data (simplified mode)...</div>';
+
+            try {
+                console.log("Loading client data in simplified mode...");
+                let queryParams = `userEmail=${encodeURIComponent(currentUserEmail)}`;
+                
+                const filterProperty = document.getElementById('filterProperty').value;
+                const filterCondition = document.getElementById('filterCondition').value;
+                const filterValue = document.getElementById('filterValue').value;
+                
+                if (filterProperty && filterCondition) {
+                    queryParams += `&filterProperty=${encodeURIComponent(filterProperty)}`;
+                    queryParams += `&filterCondition=${encodeURIComponent(filterCondition)}`;
+                    if (filterValue) {
+                        queryParams += `&filterValue=${encodeURIComponent(filterValue)}`;
+                    }
+                }
+                
+                console.log("API query:", `${PROXY_URL}/api/secure-simple?${queryParams}`);
+                
+                const response = await fetch(`${PROXY_URL}/api/secure-simple?${queryParams}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                console.log("Data response status:", response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    console.error("API error:", errorData);
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("Data loaded successfully:", data);
+                
+                if (data.authorizedClient) {
+                    document.getElementById('clientDisplay').textContent = `${data.authorizedClient} Dashboard`;
+                }
+                
+                displayDataAsTable(data);
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showError(`Error loading data: ${error.message}<br><br>This could be due to:<br>• Network connectivity issues<br>• Server configuration problems<br>• User access restrictions<br><br>Check the browser console for more details.`);
+            }
+        }
             
             // Get user credentials from URL
             const urlParams = new URLSearchParams(window.location.search);
             const userEmail = urlParams.get('userEmail');
             const authToken = urlParams.get('authToken');
+            const simpleMode = urlParams.get('simple');
             
-            if (!userEmail || !authToken) {
-                showError('🔒 Authentication Required<br><br>Missing authentication credentials. Please access this page through the proper secure link.');
+            if (!userEmail) {
+                showError('🔒 Authentication Required<br><br>Missing user email. Please access this page through the proper secure link.');
                 return;
             }
             
             currentUserEmail = userEmail;
-            currentAuthToken = authToken;
-            
             document.getElementById('userEmail').textContent = userEmail;
-            document.getElementById('tokenStatus').textContent = 'Valid ✅';
             
-            console.log("User authenticated:", userEmail);
-            
-            // Auto-load properties and data for this authenticated user
-            loadPropertiesSecure().then(() => {
-                loadClientDataSecure();
-            }).catch(error => {
-                document.getElementById('tokenStatus').textContent = 'Invalid ❌';
-                showError(`Authentication failed: ${error.message}`);
-            });
+            if (simpleMode === 'true') {
+                // Use simplified mode without token verification
+                document.getElementById('tokenStatus').textContent = 'Simplified Mode ✅';
+                console.log("Using simplified authentication mode");
+                loadPropertiesSimple().then(() => {
+                    loadClientDataSimple();
+                }).catch(error => {
+                    showError(`Authentication failed: ${error.message}`);
+                });
+            } else {
+                // Use full token verification
+                if (!authToken) {
+                    showError('🔒 Authentication Required<br><br>Missing authentication token. Please access this page through the proper secure link.');
+                    return;
+                }
+                
+                currentAuthToken = authToken;
+                document.getElementById('tokenStatus').textContent = 'Valid ✅';
+                console.log("User authenticated:", userEmail);
+                
+                loadPropertiesSecure().then(() => {
+                    loadClientDataSecure();
+                }).catch(error => {
+                    document.getElementById('tokenStatus').textContent = 'Invalid ❌';
+                    showError(`Authentication failed: ${error.message}`);
+                });
+            }
         });
 
         async function loadPropertiesSecure() {
