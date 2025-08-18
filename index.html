@@ -106,14 +106,70 @@
             border-color: #667eea;
         }
         
-        .unpaid-filter {
-            background: #dc3545;
-            border-color: #dc3545;
+        .summary-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-box {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        
+        .summary-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+        
+        .summary-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .summary-breakdown {
+            font-size: 12px;
+            color: #6c757d;
+            line-height: 1.4;
+        }
+        
+        .void-row {
+            text-decoration: line-through;
+            opacity: 0.6;
+            background: #f8f9fa !important;
+        }
+        
+        .void-filter {
+            background: #6c757d;
+            border-color: #6c757d;
             color: white;
         }
         
-        .unpaid-filter:hover {
-            background: #c82333;
+        .void-filter:hover {
+            background: #5a6268;
+        }
+        
+        .dropdown-filter {
+            padding: 6px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background: white;
+            color: #495057;
+            font-size: 12px;
+            min-width: 120px;
+        }
+        
+        .dropdown-filter:focus {
+            outline: none;
+            border-color: #667eea;
         }
         
         .pagination-container {
@@ -157,9 +213,79 @@
             cursor: not-allowed;
         }
         
-        .pagination-btn.active {
-            background: #667eea;
+        .unpaid-filter {
+            background: #dc3545;
+            border-color: #dc3545;
             color: white;
+        }
+        
+        .unpaid-filter:hover {
+            background: #c82333;
+        }
+        
+        .summary-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-box {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-left: 4px solid #667eea;
+        }
+        
+        .summary-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+        
+        .summary-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .summary-breakdown {
+            font-size: 12px;
+            color: #6c757d;
+            line-height: 1.4;
+        }
+        
+        .void-row {
+            text-decoration: line-through;
+            opacity: 0.6;
+            background: #f8f9fa !important;
+        }
+        
+        .void-filter {
+            background: #6c757d;
+            border-color: #6c757d;
+            color: white;
+        }
+        
+        .void-filter:hover {
+            background: #5a6268;
+        }
+        
+        .dropdown-filter {
+            padding: 6px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background: white;
+            color: #495057;
+            font-size: 12px;
+            min-width: 120px;
+        }
+        
+        .dropdown-filter:focus {
+            outline: none;
             border-color: #667eea;
         }
         
@@ -363,6 +489,20 @@
         </div>
     </div>
 
+    <!-- Summary Boxes -->
+    <div class="summary-container" id="summaryContainer" style="display: none;">
+        <div class="summary-box">
+            <div class="summary-title">Total Income by Currency</div>
+            <div class="summary-value" id="totalIncome">Calculating...</div>
+            <div class="summary-breakdown" id="totalIncomeBreakdown"></div>
+        </div>
+        <div class="summary-box">
+            <div class="summary-title">Unpaid Income by Currency</div>
+            <div class="summary-value" id="unpaidIncome">Calculating...</div>
+            <div class="summary-breakdown" id="unpaidIncomeBreakdown"></div>
+        </div>
+    </div>
+
     <div class="table-container">
         <div class="table-header">
             <h2 class="table-title">Your Data</h2>
@@ -385,6 +525,15 @@
                 <button class="filter-btn" onclick="applyDateFilter('2022')">2022</button>
                 <button class="filter-btn" onclick="applyDateFilter('2021')">2021</button>
                 <button class="filter-btn unpaid-filter" onclick="applyUnpaidFilter()">Unpaid Income</button>
+                <button class="filter-btn void-filter" onclick="toggleVoidFilter()">Show Voided</button>
+            </div>
+            <div class="filter-buttons" style="margin-top: 10px;">
+                <select class="dropdown-filter" id="incomeTypeFilter" onchange="applyDropdownFilters()">
+                    <option value="">All Income Types</option>
+                </select>
+                <select class="dropdown-filter" id="currencyFilter" onchange="applyDropdownFilters()">
+                    <option value="">All Currencies</option>
+                </select>
             </div>
         </div>
         
@@ -417,6 +566,9 @@
         let recordsPerPage = 50;
         let currentDateFilter = 'all';
         let isUnpaidFilter = false;
+        let showVoidedItems = false;
+        let selectedIncomeType = '';
+        let selectedCurrency = '';
 
         // Auto-load on page load
         window.addEventListener('load', function() {
@@ -489,7 +641,9 @@
                 }
                 
                 currentData = data;
+                populateDropdownFilters(data);
                 displayDataAsTable(data);
+                updateSummaryBoxes();
                 
             } catch (error) {
                 console.error('Access verification error:', error);
@@ -561,7 +715,10 @@
             
             // Create rows
             pageData.forEach((record, index) => {
-                html += '<tr>';
+                const isVoided = record.properties['VOID?']?.checkbox === true;
+                const rowClass = isVoided ? 'void-row' : '';
+                
+                html += `<tr class="${rowClass}">`;
                 properties.forEach(prop => {
                     const property = record.properties[prop];
                     const value = property ? getPropertyValue(property, prop) : '';
@@ -575,6 +732,10 @@
             
             // Update pagination
             updatePagination(totalPages, totalRecords);
+            
+            // Show summary boxes
+            document.getElementById('summaryContainer').style.display = 'grid';
+            updateSummaryBoxes();
         }
 
         function sortTable(column) {
@@ -744,6 +905,30 @@
             
             let filtered = [...currentData.results];
             
+            // Apply VOID filter (exclude by default unless showing voided items)
+            if (!showVoidedItems) {
+                filtered = filtered.filter(record => {
+                    const isVoided = record.properties['VOID?']?.checkbox === true;
+                    return !isVoided;
+                });
+            }
+            
+            // Apply Income Type filter
+            if (selectedIncomeType) {
+                filtered = filtered.filter(record => {
+                    const incomeType = record.properties['Income Type']?.select?.name;
+                    return incomeType === selectedIncomeType;
+                });
+            }
+            
+            // Apply Currency filter
+            if (selectedCurrency) {
+                filtered = filtered.filter(record => {
+                    const currency = record.properties['Currency']?.select?.name;
+                    return currency === selectedCurrency;
+                });
+            }
+            
             // Apply date filter
             if (currentDateFilter !== 'all') {
                 filtered = filtered.filter(record => {
@@ -772,8 +957,40 @@
                 });
             }
             
+            
             // Apply unpaid filter
             if (isUnpaidFilter) {
+                filtered = filtered.filter(record => {
+                    const amountReceived = record.properties['Amount Received'];
+                    return !amountReceived || 
+                           !amountReceived.number || 
+                           amountReceived.number === 0 || 
+                           amountReceived.number === null;
+                });
+            }
+            
+            return filtered;
+        }
+        
+        function applyFilters() {
+            filteredData = getFilteredDataByDateAndUnpaid();
+            
+            // Apply search filter if there's a search term
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase().trim();
+            if (searchTerm) {
+                filteredData = filteredData.filter(record => {
+                    const searchableText = Object.values(record.properties).map(property => {
+                        if (!property) return '';
+                        return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
+                    }).join(' ');
+                    
+                    return searchableText.includes(searchTerm);
+                });
+            }
+            
+            currentPage = 1;
+            displayDataAsTable(currentData);
+        }) {
                 filtered = filtered.filter(record => {
                     const amountReceived = record.properties['Amount Received'];
                     return !amountReceived || 
@@ -841,6 +1058,105 @@
         function goToPage(page) {
             currentPage = page;
             displayDataAsTable(currentData);
+        }
+
+        function populateDropdownFilters(data) {
+            if (!data.metadata) return;
+            
+            // Populate Income Type filter
+            const incomeTypeFilter = document.getElementById('incomeTypeFilter');
+            incomeTypeFilter.innerHTML = '<option value="">All Income Types</option>';
+            data.metadata.incomeTypes.forEach(type => {
+                incomeTypeFilter.innerHTML += `<option value="${type}">${type}</option>`;
+            });
+            
+            // Populate Currency filter
+            const currencyFilter = document.getElementById('currencyFilter');
+            currencyFilter.innerHTML = '<option value="">All Currencies</option>';
+            data.metadata.currencies.forEach(currency => {
+                currencyFilter.innerHTML += `<option value="${currency}">${currency}</option>`;
+            });
+        }
+
+        function toggleVoidFilter() {
+            showVoidedItems = !showVoidedItems;
+            
+            const voidBtn = document.querySelector('.void-filter');
+            if (showVoidedItems) {
+                voidBtn.classList.add('active');
+                voidBtn.textContent = 'Hide Voided';
+            } else {
+                voidBtn.classList.remove('active');
+                voidBtn.textContent = 'Show Voided';
+            }
+            
+            applyFilters();
+        }
+
+        function applyDropdownFilters() {
+            selectedIncomeType = document.getElementById('incomeTypeFilter').value;
+            selectedCurrency = document.getElementById('currencyFilter').value;
+            applyFilters();
+        }
+
+        function updateSummaryBoxes() {
+            const displayData = filteredData || currentData.results;
+            
+            // Calculate totals by currency
+            const totalByCurrency = {};
+            const unpaidByCurrency = {};
+            
+            displayData.forEach(record => {
+                const currency = record.properties['Currency']?.select?.name || 'Unknown';
+                const grossAmount = record.properties['Gross']?.number || 0;
+                const amountReceived = record.properties['Amount Received']?.number || 0;
+                
+                // Total income
+                if (!totalByCurrency[currency]) totalByCurrency[currency] = 0;
+                totalByCurrency[currency] += grossAmount;
+                
+                // Unpaid income (where Amount Received is empty or 0)
+                if (!amountReceived || amountReceived === 0) {
+                    if (!unpaidByCurrency[currency]) unpaidByCurrency[currency] = 0;
+                    unpaidByCurrency[currency] += grossAmount;
+                }
+            });
+            
+            // Format total income
+            const totalIncomeEl = document.getElementById('totalIncome');
+            const totalIncomeBreakdownEl = document.getElementById('totalIncomeBreakdown');
+            
+            let totalIncomeText = '';
+            let totalIncomeBreakdown = '';
+            
+            Object.entries(totalByCurrency).forEach(([currency, amount]) => {
+                if (totalIncomeText) totalIncomeText += ' | ';
+                totalIncomeText += `${currency} ${formatNumber(amount)}`;
+                
+                if (totalIncomeBreakdown) totalIncomeBreakdown += '\n';
+                totalIncomeBreakdown += `${currency}: ${formatNumber(amount)}`;
+            });
+            
+            totalIncomeEl.textContent = totalIncomeText || 'No data';
+            totalIncomeBreakdownEl.textContent = totalIncomeBreakdown;
+            
+            // Format unpaid income
+            const unpaidIncomeEl = document.getElementById('unpaidIncome');
+            const unpaidIncomeBreakdownEl = document.getElementById('unpaidIncomeBreakdown');
+            
+            let unpaidIncomeText = '';
+            let unpaidIncomeBreakdown = '';
+            
+            Object.entries(unpaidByCurrency).forEach(([currency, amount]) => {
+                if (unpaidIncomeText) unpaidIncomeText += ' | ';
+                unpaidIncomeText += `${currency} ${formatNumber(amount)}`;
+                
+                if (unpaidIncomeBreakdown) unpaidIncomeBreakdown += '\n';
+                unpaidIncomeBreakdown += `${currency}: ${formatNumber(amount)}`;
+            });
+            
+            unpaidIncomeEl.textContent = unpaidIncomeText || 'All paid';
+            unpaidIncomeBreakdownEl.textContent = unpaidIncomeBreakdown;
         }
 
         function updateRecordCount(displayed, total, start, end) {
