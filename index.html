@@ -59,6 +59,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
         }
         
         .table-title {
@@ -68,9 +70,30 @@
             color: #333;
         }
         
+        .search-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .search-box {
+            padding: 8px 12px;
+            border: 2px solid #dee2e6;
+            border-radius: 6px;
+            font-size: 14px;
+            width: 250px;
+            transition: border-color 0.3s;
+        }
+        
+        .search-box:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
         .record-count {
             color: #6c757d;
             font-size: 14px;
+            white-space: nowrap;
         }
         
         .table-wrapper {
@@ -95,6 +118,33 @@
             position: sticky;
             top: 0;
             z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        
+        .data-table th:hover {
+            background: #e9ecef;
+        }
+        
+        .data-table th .sort-indicator {
+            display: inline-block;
+            margin-left: 5px;
+            opacity: 0.5;
+        }
+        
+        .data-table th.sorted-asc .sort-indicator::after {
+            content: '▲';
+            opacity: 1;
+        }
+        
+        .data-table th.sorted-desc .sort-indicator::after {
+            content: '▼';
+            opacity: 1;
+        }
+        
+        .data-table th .sort-indicator::after {
+            content: '↕';
         }
         
         .data-table td {
@@ -107,16 +157,36 @@
             background: #f8f9fa;
         }
         
+        .data-table tr.hidden {
+            display: none;
+        }
+        
+        /* Notion-style tag colors */
         .tag {
-            background: #e3f2fd;
-            color: #1976d2;
             padding: 3px 8px;
-            border-radius: 12px;
+            border-radius: 3px;
             font-size: 11px;
             font-weight: 500;
             display: inline-block;
             margin: 2px;
         }
+        
+        /* Default colors */
+        .tag.default { background: #e9ecef; color: #495057; }
+        .tag.gray { background: #e9ecef; color: #495057; }
+        .tag.brown { background: #d7ccc8; color: #5d4037; }
+        .tag.orange { background: #ffe0b2; color: #ef6c00; }
+        .tag.yellow { background: #fff9c4; color: #f57f17; }
+        .tag.green { background: #c8e6c9; color: #2e7d32; }
+        .tag.blue { background: #bbdefb; color: #1565c0; }
+        .tag.purple { background: #d1c4e9; color: #512da8; }
+        .tag.pink { background: #f8bbd9; color: #c2185b; }
+        .tag.red { background: #ffcdd2; color: #d32f2f; }
+        
+        /* Income Type specific colors */
+        .tag.royalties { background: #e3f2fd; color: #1976d2; }
+        .tag.publishing { background: #e8f5e8; color: #2e7d32; }
+        .tag.master { background: #fff3e0; color: #f57c00; }
         
         .status {
             padding: 6px 12px;
@@ -174,6 +244,22 @@
             background: #5a6fd8;
             transform: scale(1.1);
         }
+        
+        @media (max-width: 768px) {
+            .table-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .search-container {
+                justify-content: space-between;
+                width: 100%;
+            }
+            
+            .search-box {
+                width: 200px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -193,7 +279,10 @@
     <div class="table-container">
         <div class="table-header">
             <h2 class="table-title">Your Data</h2>
-            <span id="recordCount" class="record-count"></span>
+            <div class="search-container">
+                <input type="text" id="searchBox" class="search-box" placeholder="Search data..." />
+                <span id="recordCount" class="record-count"></span>
+            </div>
         </div>
         
         <div id="tableContent">
@@ -208,8 +297,9 @@
     </button>
 
     <script>
-
         let currentUserEmail = '';
+        let currentData = null;
+        let sortOrder = {};
 
         // Auto-load on page load
         window.addEventListener('load', function() {
@@ -228,270 +318,412 @@
             loadData();
         });
 
-// Update the loadData function in index.html
-async function loadData() {
-    const tableContent = document.getElementById('tableContent');
-    tableContent.innerHTML = '<div class="loading">Verifying access and loading your data...</div>';
-
-    try {
-        const urlParams = new URLSearchParams(window.location.search);
-        const userEmail = urlParams.get('userEmail');
-        const secureKey = urlParams.get('secureKey');
-        const timestamp = urlParams.get('timestamp');
-        
-        if (!userEmail || !secureKey || !timestamp) {
-            throw new Error('Missing authentication parameters');
-        }
-        
-        console.log("Verifying secure access for:", userEmail);
-        
-        const response = await fetch(`/api/client-data?userEmail=${encodeURIComponent(userEmail)}&secureKey=${secureKey}&timestamp=${timestamp}`, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
+        // Search functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchBox = document.getElementById('searchBox');
+            if (searchBox) {
+                searchBox.addEventListener('input', filterData);
             }
         });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `Access denied: ${response.status}`);
-        }
 
-        const data = await response.json();
-        console.log("Secure access granted, data received:", data);
-        
-        if (data.authorizedClient) {
-            document.getElementById('clientDisplay').textContent = `${data.authorizedClient} Dashboard`;
-        }
-        
-        displayDataAsTable(data);
-        
-    } catch (error) {
-        console.error('Access verification error:', error);
-        showError(`Access Denied: ${error.message}<br><br>Please access this dashboard through the official website.`);
-    }
-}
+        async function loadData() {
+            const tableContent = document.getElementById('tableContent');
+            tableContent.innerHTML = '<div class="loading">Verifying access and loading your data...</div>';
 
-function displayDataAsTable(data) {
-    const tableContent = document.getElementById('tableContent');
-    const recordCount = document.getElementById('recordCount');
-    
-    if (!data.results || data.results.length === 0) {
-        tableContent.innerHTML = `
-            <div class="no-data">
-                <h3>No data found for your account</h3>
-                <p>Contact your administrator if you believe this is an error.</p>
-            </div>
-        `;
-        recordCount.textContent = '0 records';
-        return;
-    }
-    recordCount.textContent = `${data.results.length} record${data.results.length !== 1 ? 's' : ''}`;
-    
-    // Get all properties except Client
-    const properties = new Set();
-    data.results.forEach(record => {
-        Object.keys(record.properties).forEach(prop => {
-            if (prop !== 'Client') properties.add(prop);
-        });
-    });
-    
-    let html = `
-        <div class="table-wrapper">
-            <table class="data-table">
-                <thead>
-                    <tr>
-    `;
-    
-    // Create headers
-    Array.from(properties).forEach(prop => {
-        html += `<th>${prop}</th>`;
-    });
-    html += `</tr></thead><tbody>`;
-    
-    // Create rows
-    data.results.forEach((record, index) => {
-        // ADD LOGGING HERE - Debug the first record
-        if (index === 0) {
-            console.log('=== VENDOR RELATION DEBUG ===');
-            console.log('All properties:', Object.keys(record.properties));
-            console.log('Vendor property exists:', 'Vendor' in record.properties);
-            console.log('Vendor property full object:', JSON.stringify(record.properties['Vendor'], null, 2));
-        }
-        
-        html += '<tr>';
-        Array.from(properties).forEach(prop => {
-            const property = record.properties[prop];
-            const value = property ? getPropertyValue(property) : '';
-            html += `<td>${value}</td>`;
-        });
-        html += '</tr>';
-    });
-    
-    html += '</tbody></table></div>';
-    tableContent.innerHTML = html;
-}
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                const userEmail = urlParams.get('userEmail');
+                const secureKey = urlParams.get('secureKey');
+                const timestamp = urlParams.get('timestamp');
+                
+                if (!userEmail || !secureKey || !timestamp) {
+                    throw new Error('Missing authentication parameters');
+                }
+                
+                console.log("Verifying secure access for:", userEmail);
+                
+                const response = await fetch(`/api/client-data?userEmail=${encodeURIComponent(userEmail)}&secureKey=${secureKey}&timestamp=${timestamp}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `Access denied: ${response.status}`);
+                }
 
-function getPropertyValue(property) {
-    if (!property) return '';
-
-        // Add this debug line at the start
-    if (property.type === 'relation') {
-        console.log('=== RELATION PROPERTY DEBUG ===');
-        console.log('Property type:', property.type);
-        console.log('Full property object:', JSON.stringify(property, null, 2));
-    }
-    
-    switch (property.type) {
-        case 'title':
-            return property.title.map(t => t.plain_text).join('');
-            
-        case 'rich_text':
-            return property.rich_text.map(t => t.plain_text).join('');
-            
-        case 'number':
-            return property.number ? property.number.toLocaleString() : '';
-            
-        case 'select':
-            return property.select ? `<span class="tag">${property.select.name}</span>` : '';
-            
-        case 'multi_select':
-            return property.multi_select.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
-            
-        case 'date':
-            if (property.date) {
-                const date = new Date(property.date.start);
-                return date.toLocaleDateString();
+                const data = await response.json();
+                console.log("Secure access granted, data received:", data);
+                
+                if (data.authorizedClient) {
+                    document.getElementById('clientDisplay').textContent = `${data.authorizedClient} Dashboard`;
+                }
+                
+                currentData = data;
+                displayDataAsTable(data);
+                
+            } catch (error) {
+                console.error('Access verification error:', error);
+                showError(`Access Denied: ${error.message}<br><br>Please access this dashboard through the official website.`);
             }
-            return '';
-            
-        case 'checkbox':
-            return property.checkbox ? '✅' : '❌';
-            
-        case 'url':
-            return property.url ? `<a href="${property.url}" target="_blank" style="color: #667eea;">🔗 Link</a>` : '';
-            
-        case 'email':
-            return property.email ? `<a href="mailto:${property.email}" style="color: #667eea;">📧 ${property.email}</a>` : '';
-            
-        case 'phone_number':
-            return property.phone_number ? `📞 ${property.phone_number}` : '';
-            
-        case 'status':
-            if (property.status) {
-                const status = property.status.name.toLowerCase().replace(/\s+/g, '-');
-                return `<span class="status ${status}">${property.status.name}</span>`;
-            }
-            return '';
-            
-        case 'people':
-            return property.people.map(person => `👤 ${person.name}`).join(', ');
-            
-// RELATION FIELDS
-case 'relation':
-    console.log('Processing relation field:', property);
-    console.log('Relation array:', property.relation);
-    console.log('Relation titles:', property.relation_titles);
-    
-    if (property.relation && property.relation.length > 0) {
-        // Check if we have enhanced relation titles first
-        if (property.relation_titles) {
-            console.log('Returning relation titles:', property.relation_titles);
-            return property.relation_titles;
         }
-        // Show the first relation ID or a more descriptive message
-        const result = `Vendor ID: ${property.relation[0].id.slice(-8)}`;
-        console.log('Returning relation result:', result);
-        return result;
-    }
-    console.log('Returning empty for relation - no relation data');
-    return '';
+
+        function displayDataAsTable(data) {
+            const tableContent = document.getElementById('tableContent');
+            const recordCount = document.getElementById('recordCount');
             
-        // FORMULA FIELDS  
-case 'formula':
-    console.log('Formula property full object:', JSON.stringify(property, null, 2));
-    
-    if (!property.formula) {
-        console.log('No formula property found');
-        return '';
-    }
-    
-    const formulaResult = property.formula;
+            if (!data.results || data.results.length === 0) {
+                tableContent.innerHTML = `
+                    <div class="no-data">
+                        <h3>No data found for your account</h3>
+                        <p>Contact your administrator if you believe this is an error.</p>
+                    </div>
+                `;
+                recordCount.textContent = '0 records';
+                return;
+            }
+
+            updateRecordCount(data.results.length, data.results.length);
             
-    if (formulaResult.type === 'string') {
-        console.log('String value:', formulaResult.string);
-        return formulaResult.string || '';
-    } else if (formulaResult.type === 'number') {
-        return formulaResult.number !== null ? formulaResult.number.toLocaleString() : '';
-    } else if (formulaResult.type === 'boolean') {
-        return formulaResult.boolean ? '✅' : '❌';
-    } else if (formulaResult.type === 'date') {
-        return formulaResult.date ? new Date(formulaResult.date.start).toLocaleDateString() : '';
-    } else {
-        // For any other types or null results
-        console.log('Unhandled formula result:', formulaResult);
-        return formulaResult.string || formulaResult.number || '';
-    }
+            // Use column order and headers from API response
+            const columnOrder = data.columnOrder || [];
+            const columnHeaders = data.columnHeaders || {};
             
-        // ROLLUP FIELDS
-        case 'rollup':
-            if (!property.rollup) return '';
+            // Get all properties except Client, but respect the order if provided
+            let properties = [];
+            if (columnOrder.length > 0) {
+                properties = columnOrder.filter(col => {
+                    return data.results.some(record => record.properties[col]);
+                });
+            } else {
+                const propSet = new Set();
+                data.results.forEach(record => {
+                    Object.keys(record.properties).forEach(prop => {
+                        if (prop !== 'Client') propSet.add(prop);
+                    });
+                });
+                properties = Array.from(propSet);
+            }
             
-            switch (property.rollup.type) {
+            let html = `
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+            `;
+            
+            // Create headers with custom names and sort functionality
+            properties.forEach(prop => {
+                const displayName = columnHeaders[prop] || prop;
+                html += `<th data-column="${prop}" onclick="sortTable('${prop}')">${displayName}<span class="sort-indicator"></span></th>`;
+            });
+            html += `</tr></thead><tbody id="tableBody">`;
+            
+            // Create rows
+            data.results.forEach((record, index) => {
+                html += '<tr>';
+                properties.forEach(prop => {
+                    const property = record.properties[prop];
+                    const value = property ? getPropertyValue(property) : '';
+                    html += `<td>${value}</td>`;
+                });
+                html += '</tr>';
+            });
+            
+            html += '</tbody></table></div>';
+            tableContent.innerHTML = html;
+        }
+
+        function sortTable(column) {
+            if (!currentData || !currentData.results) return;
+            
+            // Toggle sort order
+            if (sortOrder[column] === 'asc') {
+                sortOrder[column] = 'desc';
+            } else {
+                sortOrder[column] = 'asc';
+            }
+            
+            // Clear other column sorts (single column sort)
+            Object.keys(sortOrder).forEach(col => {
+                if (col !== column) {
+                    delete sortOrder[col];
+                    const header = document.querySelector(`th[data-column="${col}"]`);
+                    if (header) {
+                        header.classList.remove('sorted-asc', 'sorted-desc');
+                    }
+                }
+            });
+            
+            // Update header appearance
+            const headers = document.querySelectorAll('th[data-column]');
+            headers.forEach(header => {
+                const col = header.getAttribute('data-column');
+                header.classList.remove('sorted-asc', 'sorted-desc');
+                if (col === column) {
+                    header.classList.add(sortOrder[column] === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                }
+            });
+            
+            // Sort the data
+            currentData.results.sort((a, b) => {
+                const aValue = getPropertySortValue(a.properties[column]);
+                const bValue = getPropertySortValue(b.properties[column]);
+                
+                if (aValue === bValue) return 0;
+                
+                const comparison = aValue < bValue ? -1 : 1;
+                return sortOrder[column] === 'asc' ? comparison : -comparison;
+            });
+            
+            // Re-render the table
+            displayDataAsTable(currentData);
+            
+            // Re-apply search filter if active
+            const searchBox = document.getElementById('searchBox');
+            if (searchBox && searchBox.value.trim()) {
+                filterData();
+            }
+        }
+
+        function getPropertySortValue(property) {
+            if (!property) return '';
+            
+            switch (property.type) {
                 case 'number':
-                    return property.rollup.number ? property.rollup.number.toLocaleString() : '';
+                    return property.number || 0;
                 case 'date':
-                    if (property.rollup.date) {
-                        const date = new Date(property.rollup.date.start);
-                        return date.toLocaleDateString();
+                    return property.date ? new Date(property.date.start).getTime() : 0;
+                case 'select':
+                    return property.select ? property.select.name.toLowerCase() : '';
+                case 'multi_select':
+                    return property.multi_select.map(tag => tag.name).join(' ').toLowerCase();
+                case 'title':
+                    return property.title.map(t => t.plain_text).join('').toLowerCase();
+                case 'rich_text':
+                    return property.rich_text.map(t => t.plain_text).join('').toLowerCase();
+                case 'relation':
+                    return property.relation_titles ? property.relation_titles.toLowerCase() : '';
+                default:
+                    return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
+            }
+        }
+
+        function filterData() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase().trim();
+            const rows = document.querySelectorAll('#tableBody tr');
+            let visibleCount = 0;
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                if (!searchTerm || text.includes(searchTerm)) {
+                    row.classList.remove('hidden');
+                    visibleCount++;
+                } else {
+                    row.classList.add('hidden');
+                }
+            });
+            
+            updateRecordCount(visibleCount, rows.length);
+        }
+
+        function updateRecordCount(visible, total) {
+            const recordCount = document.getElementById('recordCount');
+            if (visible === total) {
+                recordCount.textContent = `${total} record${total !== 1 ? 's' : ''}`;
+            } else {
+                recordCount.textContent = `${visible} of ${total} record${total !== 1 ? 's' : ''}`;
+            }
+        }
+
+        function formatNumber(num) {
+            if (num === null || num === undefined) return '';
+            return Number(num).toFixed(2);
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+            return `${day} ${month} ${year}`;
+        }
+
+        function getTagClass(tagName) {
+            const name = tagName.toLowerCase().replace(/\s+/g, '-');
+            
+            // Income type specific mappings
+            const incomeTypeMap = {
+                'royalties': 'royalties',
+                'publishing': 'publishing', 
+                'master': 'master',
+                'royalties - publishing': 'publishing',
+                'royalties - master': 'master'
+            };
+            
+            if (incomeTypeMap[name]) {
+                return incomeTypeMap[name];
+            }
+            
+            // Default Notion color mappings
+            const colorMap = {
+                'gray': 'gray', 'grey': 'gray',
+                'brown': 'brown',
+                'orange': 'orange',
+                'yellow': 'yellow',
+                'green': 'green',
+                'blue': 'blue',
+                'purple': 'purple',
+                'pink': 'pink',
+                'red': 'red'
+            };
+            
+            // Check if tag name contains color
+            for (const [key, value] of Object.entries(colorMap)) {
+                if (name.includes(key)) return value;
+            }
+            
+            // Generate consistent color based on hash
+            const colors = ['blue', 'green', 'purple', 'orange', 'pink', 'yellow'];
+            let hash = 0;
+            for (let i = 0; i < tagName.length; i++) {
+                hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        function getPropertyValue(property) {
+            if (!property) return '';
+            
+            switch (property.type) {
+                case 'title':
+                    return property.title.map(t => t.plain_text).join('');
+                    
+                case 'rich_text':
+                    return property.rich_text.map(t => t.plain_text).join('');
+                    
+                case 'number':
+                    return property.number !== null ? formatNumber(property.number) : '';
+                    
+                case 'select':
+                    if (property.select) {
+                        const tagClass = getTagClass(property.select.name);
+                        return `<span class="tag ${tagClass}">${property.select.name}</span>`;
                     }
                     return '';
-                case 'array':
-                    if (property.rollup.array && property.rollup.array.length > 0) {
-                        // Handle different types within the array
-                        return property.rollup.array.map(item => {
-                            if (item.type === 'number') {
-                                return item.number ? item.number.toLocaleString() : '';
-                            } else if (item.type === 'rich_text') {
-                                return item.rich_text.map(t => t.plain_text).join('');
-                            } else if (item.type === 'title') {
-                                return item.title.map(t => t.plain_text).join('');
+                    
+                case 'multi_select':
+                    return property.multi_select.map(tag => {
+                        const tagClass = getTagClass(tag.name);
+                        return `<span class="tag ${tagClass}">${tag.name}</span>`;
+                    }).join(' ');
+                    
+                case 'date':
+                    return property.date ? formatDate(property.date.start) : '';
+                    
+                case 'checkbox':
+                    return property.checkbox ? '✅' : '❌';
+                    
+                case 'url':
+                    return property.url ? `<a href="${property.url}" target="_blank" style="color: #667eea;">🔗 Link</a>` : '';
+                    
+                case 'email':
+                    return property.email ? `<a href="mailto:${property.email}" style="color: #667eea;">📧 ${property.email}</a>` : '';
+                    
+                case 'phone_number':
+                    return property.phone_number ? `📞 ${property.phone_number}` : '';
+                    
+                case 'status':
+                    if (property.status) {
+                        const status = property.status.name.toLowerCase().replace(/\s+/g, '-');
+                        return `<span class="status ${status}">${property.status.name}</span>`;
+                    }
+                    return '';
+                    
+                case 'people':
+                    return property.people.map(person => `👤 ${person.name}`).join(', ');
+                    
+                case 'relation':
+                    if (property.relation && property.relation.length > 0) {
+                        if (property.relation_titles) {
+                            return property.relation_titles;
+                        }
+                        return `${property.relation.length} linked item${property.relation.length !== 1 ? 's' : ''}`;
+                    }
+                    return '';
+                    
+                case 'formula':
+                    if (!property.formula) return '';
+                    
+                    const formulaResult = property.formula;
+                    
+                    if (formulaResult.type === 'string') {
+                        return formulaResult.string || '';
+                    } else if (formulaResult.type === 'number') {
+                        return formulaResult.number !== null ? formatNumber(formulaResult.number) : '';
+                    } else if (formulaResult.type === 'boolean') {
+                        return formulaResult.boolean ? '✅' : '❌';
+                    } else if (formulaResult.type === 'date') {
+                        return formulaResult.date ? formatDate(formulaResult.date.start) : '';
+                    } else {
+                        return formulaResult.string || formulaResult.number || '';
+                    }
+                    
+                case 'rollup':
+                    if (!property.rollup) return '';
+                    
+                    switch (property.rollup.type) {
+                        case 'number':
+                            return property.rollup.number ? formatNumber(property.rollup.number) : '';
+                        case 'date':
+                            return property.rollup.date ? formatDate(property.rollup.date.start) : '';
+                        case 'array':
+                            if (property.rollup.array && property.rollup.array.length > 0) {
+                                return property.rollup.array.map(item => {
+                                    if (item.type === 'number') {
+                                        return item.number ? formatNumber(item.number) : '';
+                                    } else if (item.type === 'rich_text') {
+                                        return item.rich_text.map(t => t.plain_text).join('');
+                                    } else if (item.type === 'title') {
+                                        return item.title.map(t => t.plain_text).join('');
+                                    }
+                                    return '';
+                                }).filter(val => val).join(', ');
                             }
                             return '';
-                        }).filter(val => val).join(', ');
+                        default:
+                            return '';
+                    }
+                    
+                case 'files':
+                    if (property.files && property.files.length > 0) {
+                        return `📎 ${property.files.length} file${property.files.length !== 1 ? 's' : ''}`;
                     }
                     return '';
+                    
+                case 'created_time':
+                    return formatDate(property.created_time);
+                    
+                case 'last_edited_time':
+                    return formatDate(property.last_edited_time);
+                    
+                case 'created_by':
+                    return property.created_by.name || 'Unknown';
+                    
+                case 'last_edited_by':
+                    return property.last_edited_by.name || 'Unknown';
+                    
                 default:
-                    return '';
+                    console.log('Unhandled property type:', property.type, property);
+                    return JSON.stringify(property).substring(0, 50) + '...';
             }
-            
-        // FILES AND MEDIA
-        case 'files':
-            if (property.files && property.files.length > 0) {
-                return `📎 ${property.files.length} file${property.files.length !== 1 ? 's' : ''}`;
-            }
-            return '';
-            
-        // CREATED/LAST EDITED METADATA
-        case 'created_time':
-            return new Date(property.created_time).toLocaleDateString();
-            
-        case 'last_edited_time':
-            return new Date(property.last_edited_time).toLocaleDateString();
-            
-        case 'created_by':
-            return property.created_by.name || 'Unknown';
-            
-        case 'last_edited_by':
-            return property.last_edited_by.name || 'Unknown';
-            
-        default:
-            // For any unhandled types, try to extract basic info
-            console.log('Unhandled property type:', property.type, property);
-            return JSON.stringify(property).substring(0, 50) + '...';
-    }
-}
+        }
 
         function showError(message) {
             const tableContent = document.getElementById('tableContent');
