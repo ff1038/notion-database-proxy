@@ -1,5 +1,5 @@
 // api/client-data.js - Minimal version for debugging
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   console.log('=== API HANDLER START ===');
   
   res.setHeader('Access-Control-Allow-Origin', '*');
