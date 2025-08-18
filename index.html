@@ -374,12 +374,16 @@ function getPropertyValue(property) {
             return property.people.map(person => `👤 ${person.name}`).join(', ');
             
         // RELATION FIELDS
-        case 'relation':
-            if (property.relation && property.relation.length > 0) {
-                // For relations, we get an array of related page IDs
-                return `🔗 ${property.relation.length} related item${property.relation.length !== 1 ? 's' : ''}`;
-            }
-            return '';
+       case 'relation':
+    if (property.relation && property.relation.length > 0) {
+        // Check if we have enhanced relation titles
+        if (property.relation_titles) {
+            return `🔗 ${property.relation_titles}`;
+        }
+        // Fallback to count
+        return `🔗 ${property.relation.length} related item${property.relation.length !== 1 ? 's' : ''}`;
+    }
+    return '';
             
         // FORMULA FIELDS  
         case 'formula':
