@@ -325,40 +325,141 @@ async function loadData() {
             tableContent.innerHTML = html;
         }
 
-        function getPropertyValue(property) {
-            switch (property.type) {
-                case 'title':
-                    return property.title.map(t => t.plain_text).join('');
-                case 'rich_text':
-                    return property.rich_text.map(t => t.plain_text).join('');
+function getPropertyValue(property) {
+    if (!property) return '';
+    
+    switch (property.type) {
+        case 'title':
+            return property.title.map(t => t.plain_text).join('');
+            
+        case 'rich_text':
+            return property.rich_text.map(t => t.plain_text).join('');
+            
+        case 'number':
+            return property.number ? property.number.toLocaleString() : '';
+            
+        case 'select':
+            return property.select ? `<span class="tag">${property.select.name}</span>` : '';
+            
+        case 'multi_select':
+            return property.multi_select.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
+            
+        case 'date':
+            if (property.date) {
+                const date = new Date(property.date.start);
+                return date.toLocaleDateString();
+            }
+            return '';
+            
+        case 'checkbox':
+            return property.checkbox ? '✅' : '❌';
+            
+        case 'url':
+            return property.url ? `<a href="${property.url}" target="_blank" style="color: #667eea;">🔗 Link</a>` : '';
+            
+        case 'email':
+            return property.email ? `<a href="mailto:${property.email}" style="color: #667eea;">📧 ${property.email}</a>` : '';
+            
+        case 'phone_number':
+            return property.phone_number ? `📞 ${property.phone_number}` : '';
+            
+        case 'status':
+            if (property.status) {
+                const status = property.status.name.toLowerCase().replace(/\s+/g, '-');
+                return `<span class="status ${status}">${property.status.name}</span>`;
+            }
+            return '';
+            
+        case 'people':
+            return property.people.map(person => `👤 ${person.name}`).join(', ');
+            
+        // RELATION FIELDS
+        case 'relation':
+            if (property.relation && property.relation.length > 0) {
+                // For relations, we get an array of related page IDs
+                return `🔗 ${property.relation.length} related item${property.relation.length !== 1 ? 's' : ''}`;
+            }
+            return '';
+            
+        // FORMULA FIELDS  
+        case 'formula':
+            if (!property.formula) return '';
+            
+            switch (property.formula.type) {
+                case 'string':
+                    return property.formula.string || '';
                 case 'number':
-                    return property.number || '';
-                case 'select':
-                    return property.select ? `<span class="tag">${property.select.name}</span>` : '';
-                case 'multi_select':
-                    return property.multi_select.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
+                    return property.formula.number ? property.formula.number.toLocaleString() : '';
+                case 'boolean':
+                    return property.formula.boolean ? '✅' : '❌';
                 case 'date':
-                    return property.date ? new Date(property.date.start).toLocaleDateString() : '';
-                case 'checkbox':
-                    return property.checkbox ? '✅' : '❌';
-                case 'url':
-                    return property.url ? `<a href="${property.url}" target="_blank" style="color: #667eea;">Link</a>` : '';
-                case 'email':
-                    return property.email ? `<a href="mailto:${property.email}" style="color: #667eea;">${property.email}</a>` : '';
-                case 'phone_number':
-                    return property.phone_number || '';
-                case 'status':
-                    if (property.status) {
-                        const status = property.status.name.toLowerCase().replace(/\s+/g, '-');
-                        return `<span class="status ${status}">${property.status.name}</span>`;
+                    if (property.formula.date) {
+                        const date = new Date(property.formula.date.start);
+                        return date.toLocaleDateString();
                     }
                     return '';
-                case 'people':
-                    return property.people.map(person => person.name).join(', ');
                 default:
                     return '';
             }
-        }
+            
+        // ROLLUP FIELDS
+        case 'rollup':
+            if (!property.rollup) return '';
+            
+            switch (property.rollup.type) {
+                case 'number':
+                    return property.rollup.number ? property.rollup.number.toLocaleString() : '';
+                case 'date':
+                    if (property.rollup.date) {
+                        const date = new Date(property.rollup.date.start);
+                        return date.toLocaleDateString();
+                    }
+                    return '';
+                case 'array':
+                    if (property.rollup.array && property.rollup.array.length > 0) {
+                        // Handle different types within the array
+                        return property.rollup.array.map(item => {
+                            if (item.type === 'number') {
+                                return item.number ? item.number.toLocaleString() : '';
+                            } else if (item.type === 'rich_text') {
+                                return item.rich_text.map(t => t.plain_text).join('');
+                            } else if (item.type === 'title') {
+                                return item.title.map(t => t.plain_text).join('');
+                            }
+                            return '';
+                        }).filter(val => val).join(', ');
+                    }
+                    return '';
+                default:
+                    return '';
+            }
+            
+        // FILES AND MEDIA
+        case 'files':
+            if (property.files && property.files.length > 0) {
+                return `📎 ${property.files.length} file${property.files.length !== 1 ? 's' : ''}`;
+            }
+            return '';
+            
+        // CREATED/LAST EDITED METADATA
+        case 'created_time':
+            return new Date(property.created_time).toLocaleDateString();
+            
+        case 'last_edited_time':
+            return new Date(property.last_edited_time).toLocaleDateString();
+            
+        case 'created_by':
+            return property.created_by.name || 'Unknown';
+            
+        case 'last_edited_by':
+            return property.last_edited_by.name || 'Unknown';
+            
+        default:
+            // For any unhandled types, try to extract basic info
+            console.log('Unhandled property type:', property.type, property);
+            return JSON.stringify(property).substring(0, 50) + '...';
+    }
+}
 
         function showError(message) {
             const tableContent = document.getElementById('tableContent');
