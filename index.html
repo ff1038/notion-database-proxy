@@ -264,11 +264,6 @@ async function loadData() {
         if (data.authorizedClient) {
             document.getElementById('clientDisplay').textContent = `${data.authorizedClient} Dashboard`;
         }
-
-        console.log('=== VENDOR RELATION DEBUG ===');
-        console.log('All properties:', Object.keys(page.properties));
-        console.log('Vendor property exists:', 'Vendor' in page.properties);
-        console.log('Vendor property full object:', JSON.stringify(page.properties['Vendor'], null, 2));
         
         displayDataAsTable(data);
         
