@@ -224,6 +224,11 @@ function debugFormulaField(data) {
                     console.log(`Record ${index + 1} formula data:`, formulaField.formula);
                 }
             }
+// Where you process each page/record
+console.log('=== VENDOR RELATION DEBUG ===');
+console.log('All properties:', Object.keys(page.properties));
+console.log('Vendor property exists:', 'Vendor' in page.properties);
+console.log('Vendor property full object:', JSON.stringify(page.properties['Vendor'], null, 2));
         });
     }
 }
