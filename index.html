@@ -209,30 +209,6 @@
 
     <script>
 
-     // Add this debug code to your dashboard (in loadData function after receiving data)
-function debugFormulaField(data) {
-    if (data.results && data.results.length > 0) {
-        console.log('=== FORMULA FIELD DEBUG ===');
-        
-        data.results.forEach((record, index) => {
-            if (index < 3) { // Check first 3 records
-                const formulaField = record.properties['Your Formula Field Name']; // Replace with actual field name
-                console.log(`Record ${index + 1} formula field:`, formulaField);
-                
-                if (formulaField) {
-                    console.log(`Record ${index + 1} formula type:`, formulaField.type);
-                    console.log(`Record ${index + 1} formula data:`, formulaField.formula);
-                }
-            }
-// Where you process each page/record
-console.log('=== VENDOR RELATION DEBUG ===');
-console.log('All properties:', Object.keys(page.properties));
-console.log('Vendor property exists:', 'Vendor' in page.properties);
-console.log('Vendor property full object:', JSON.stringify(page.properties['Vendor'], null, 2));
-        });
-    }
-}
-        
         let currentUserEmail = '';
 
         // Auto-load on page load
@@ -283,7 +259,11 @@ async function loadData() {
         }
 
         const data = await response.json();
-        debugFormulaField(data);
+        // Where you process each page/record
+console.log('=== VENDOR RELATION DEBUG ===');
+console.log('All properties:', Object.keys(page.properties));
+console.log('Vendor property exists:', 'Vendor' in page.properties);
+console.log('Vendor property full object:', JSON.stringify(page.properties['Vendor'], null, 2));
         console.log("Secure access granted, data received:", data);
         
         if (data.authorizedClient) {
