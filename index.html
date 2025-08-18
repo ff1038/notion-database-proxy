@@ -209,29 +209,23 @@
 
     <script>
 
-        // Add this debug function to your dashboard (temporary)
-function debugRelationFields(data) {
+     // Add this debug code to your dashboard (in loadData function after receiving data)
+function debugFormulaField(data) {
     if (data.results && data.results.length > 0) {
-        console.log('=== CHECKING ALL RECORDS FOR VENDORS ===');
-        
-        let recordsWithVendors = 0;
-        let recordsWithoutVendors = 0;
+        console.log('=== FORMULA FIELD DEBUG ===');
         
         data.results.forEach((record, index) => {
-            if (record.properties.Vendor) {
-                const vendorRelation = record.properties.Vendor.relation;
-                if (vendorRelation && vendorRelation.length > 0) {
-                    recordsWithVendors++;
-                    console.log(`Record ${index + 1}: Has ${vendorRelation.length} vendor(s)`);
-                } else {
-                    recordsWithoutVendors++;
-                    if (index < 5) { // Only log first 5 to avoid spam
-                        console.log(`Record ${index + 1}: No vendors linked`);
-                    }
+            if (index < 3) { // Check first 3 records
+                const formulaField = record.properties['Your Formula Field Name']; // Replace with actual field name
+                console.log(`Record ${index + 1} formula field:`, formulaField);
+                
+                if (formulaField) {
+                    console.log(`Record ${index + 1} formula type:`, formulaField.type);
+                    console.log(`Record ${index + 1} formula data:`, formulaField.formula);
                 }
             }
         });
-        
+   
         console.log(`Summary: ${recordsWithVendors} records with vendors, ${recordsWithoutVendors} without vendors`);
     }
 }
@@ -286,7 +280,7 @@ async function loadData() {
         }
 
         const data = await response.json();
-        debugRelationFields(data); // Add this line
+        debugFormulaField(data);
         console.log("Secure access granted, data received:", data);
         
         if (data.authorizedClient) {
@@ -415,25 +409,33 @@ function getPropertyValue(property) {
     return '';
             
         // FORMULA FIELDS  
-        case 'formula':
-            if (!property.formula) return '';
-            
-            switch (property.formula.type) {
-                case 'string':
-                    return property.formula.string || '';
-                case 'number':
-                    return property.formula.number ? property.formula.number.toLocaleString() : '';
-                case 'boolean':
-                    return property.formula.boolean ? '✅' : '❌';
-                case 'date':
-                    if (property.formula.date) {
-                        const date = new Date(property.formula.date.start);
-                        return date.toLocaleDateString();
-                    }
-                    return '';
-                default:
-                    return '';
+     case 'formula':
+    if (!property.formula) {
+        console.log('Formula property has no formula data:', property);
+        return '';
+    }
+    
+    console.log('Processing formula:', property.formula); // Debug line
+    
+    switch (property.formula.type) {
+        case 'string':
+            const stringResult = property.formula.string || '';
+            console.log('Formula string result:', stringResult); // Debug line
+            return stringResult;
+        case 'number':
+            return property.formula.number ? property.formula.number.toLocaleString() : '';
+        case 'boolean':
+            return property.formula.boolean ? '✅' : '❌';
+        case 'date':
+            if (property.formula.date) {
+                const date = new Date(property.formula.date.start);
+                return date.toLocaleDateString();
             }
+            return '';
+        default:
+            console.log('Unknown formula type:', property.formula.type, property.formula);
+            return JSON.stringify(property.formula).substring(0, 100);
+    }
             
         // ROLLUP FIELDS
         case 'rollup':
