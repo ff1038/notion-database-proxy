@@ -450,16 +450,16 @@
         
         <div style="padding: 15px 20px; background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
             <div class="filter-buttons">
-                <button class="filter-btn active" onclick="applyDateFilter('all')">All Time</button>
-                <button class="filter-btn" onclick="applyDateFilter('30')">Last 30 Days</button>
-                <button class="filter-btn" onclick="applyDateFilter('90')">Last 90 Days</button>
-                <button class="filter-btn" onclick="applyDateFilter('180')">Last 6 Months</button>
-                <button class="filter-btn" onclick="applyDateFilter('365')">Last 12 Months</button>
-                <button class="filter-btn" onclick="applyDateFilter('2025')">2025</button>
-                <button class="filter-btn" onclick="applyDateFilter('2024')">2024</button>
-                <button class="filter-btn" onclick="applyDateFilter('2023')">2023</button>
-                <button class="filter-btn" onclick="applyDateFilter('2022')">2022</button>
-                <button class="filter-btn" onclick="applyDateFilter('2021')">2021</button>
+                <button class="filter-btn active" onclick="applyDateFilter('all', event)">All Time</button>
+                <button class="filter-btn" onclick="applyDateFilter('30'), event">Last 30 Days</button>
+                <button class="filter-btn" onclick="applyDateFilter('90'), event">Last 90 Days</button>
+                <button class="filter-btn" onclick="applyDateFilter('180'), event">Last 6 Months</button>
+                <button class="filter-btn" onclick="applyDateFilter('365'), event">Last 12 Months</button>
+                <button class="filter-btn" onclick="applyDateFilter('2025'), event">2025</button>
+                <button class="filter-btn" onclick="applyDateFilter('2024'), event">2024</button>
+                <button class="filter-btn" onclick="applyDateFilter('2023'), event">2023</button>
+                <button class="filter-btn" onclick="applyDateFilter('2022'), event">2022</button>
+                <button class="filter-btn" onclick="applyDateFilter('2021'), event">2021</button>
                 <button class="filter-btn unpaid-filter" onclick="applyUnpaidFilter()">Unpaid Income</button>
                 <button class="filter-btn void-filter" onclick="toggleVoidFilter()">Show Voided</button>
             </div>
@@ -502,17 +502,19 @@
         let selectedIncomeType = '';
         let selectedCurrency = '';
 
-        function applyDateFilter(filter) {
-            document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            currentDateFilter = filter;
-            isUnpaidFilter = false;
-            const unpaidBtn = document.querySelector('.unpaid-filter');
-            if (unpaidBtn) unpaidBtn.classList.remove('active');
-            applyFilters();
-        }
+function applyDateFilter(filter, evt) {
+    document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    if (evt && evt.target) {
+        evt.target.classList.add('active');
+    }
+    currentDateFilter = filter;
+    isUnpaidFilter = false;
+    const unpaidBtn = document.querySelector('.unpaid-filter');
+    if (unpaidBtn) unpaidBtn.classList.remove('active');
+    applyFilters();
+}
         
         function applyUnpaidFilter() {
             isUnpaidFilter = !isUnpaidFilter;
@@ -666,18 +668,19 @@
         }
 
         function populateDropdownFilters(data) {
-            if (!data.metadata) return;
-            const incomeTypeFilter = document.getElementById('incomeTypeFilter');
-            incomeTypeFilter.innerHTML = '<option value="">All Income Types</option>';
-            data.metadata.incomeTypes.forEach(type => {
-                incomeTypeFilter.innerHTML += `<option value="${type}">${type}</option>`;
-            });
-            const currencyFilter = document.getElementById('currencyFilter');
-            currencyFilter.innerHTML = '<option value="">All Currencies</option>';
-            data.metadata.currencies.forEach(currency => {
-                currencyFilter.innerHTML += `<option value="${currency}">${currency}</option>`;
-            });
-        }
+    if (!data.metadata) return;
+    const incomeTypeFilter = document.getElementById('incomeTypeFilter');
+    incomeTypeFilter.innerHTML = '<option value="">All Income Types</option>';
+    (data.metadata.incomeTypes || []).forEach(type => {
+        incomeTypeFilter.innerHTML += `<option value="${type}">${type}</option>`;
+    });
+
+    const currencyFilter = document.getElementById('currencyFilter');
+    currencyFilter.innerHTML = '<option value="">All Currencies</option>';
+    (data.metadata.currencies || []).forEach(currency => {
+        currencyFilter.innerHTML += `<option value="${currency}">${currency}</option>`;
+    });
+}
 
         function displayDataAsTable(data) {
             const tableContent = document.getElementById('tableContent');
@@ -815,70 +818,75 @@
             }
         }
 
-        function getFilteredDataByDateAndUnpaid() {
-            if (!currentData || !currentData.results) return [];
-            
-            let filtered = [...currentData.results];
-            
-            if (!showVoidedItems) {
-                filtered = filtered.filter(record => {
-                    const voidProperty = record.properties['VOID?'];
-                    if (!voidProperty) return true;
-                    const isVoided = voidProperty?.checkbox === true;
-                    return !isVoided;
-                });
+ function getFilteredDataByDateAndUnpaid() {
+    if (!currentData || !currentData.results) return [];
+
+    let filtered = [...currentData.results];
+
+    // Hide voided unless toggled on
+    if (!showVoidedItems) {
+        filtered = filtered.filter(record => {
+            const voidProperty = record.properties['VOID?'];
+            const isVoided = !!(voidProperty && voidProperty.checkbox === true);
+            return !isVoided;
+        });
+    }
+
+    // Income type filter
+    if (selectedIncomeType) {
+        filtered = filtered.filter(record => {
+            const incomeType = record.properties['Income Type']?.select?.name;
+            return incomeType === selectedIncomeType;
+        });
+    }
+
+    // Currency filter
+    if (selectedCurrency) {
+        filtered = filtered.filter(record => {
+            const currency = record.properties['Currency']?.select?.name;
+            return currency === selectedCurrency;
+        });
+    }
+
+    // Date range / year filter
+    if (currentDateFilter !== 'all') {
+        filtered = filtered.filter(record => {
+            const dateProperty = record.properties['Invoice date'];
+            if (!dateProperty || !dateProperty.date) return false;
+
+            const recordDate = new Date(dateProperty.date.start);
+            const now = new Date();
+
+            if (currentDateFilter === '30') {
+                const d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                return recordDate >= d;
+            } else if (currentDateFilter === '90') {
+                const d = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                return recordDate >= d;
+            } else if (currentDateFilter === '180') {
+                const d = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+                return recordDate >= d;
+            } else if (currentDateFilter === '365') {
+                const d = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+                return recordDate >= d;
+            } else {
+                // treat as a specific year (e.g., '2025')
+                return recordDate.getFullYear().toString() === currentDateFilter;
             }
-            
-            if (selectedIncomeType) {
-                filtered = filtered.filter(record => {
-                    const incomeType = record.properties['Income Type']?.select?.name;
-                    return incomeType === selectedIncomeType;
-                });
-            }
-            
-            if (selectedCurrency) {
-                filtered = filtered.filter(record => {
-                    const currency = record.properties['Currency']?.select?.name;
-                    return currency === selectedCurrency;
-                });
-            }
-            
-                    const dateProperty = record.properties['Invoice date'];
-                    if (!dateProperty || !dateProperty.date) return false;
-                    
-                    const recordDate = new Date(dateProperty.date.start);
-                    const now = new Date();
-                    
-                    if (currentDateFilter === '30') {
-                        const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-                        return recordDate >= thirtyDaysAgo;
-                    } else if (currentDateFilter === '90') {
-                        const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
-                        return recordDate >= ninetyDaysAgo;
-                    } else if (currentDateFilter === '180') {
-                        const sixMonthsAgo = new Date(now.getTime() - (180 * 24 * 60 * 60 * 1000));
-                        return recordDate >= sixMonthsAgo;
-                    } else if (currentDateFilter === '365') {
-                        const oneYearAgo = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000));
-                        return recordDate >= oneYearAgo;
-                    } else {
-                        return recordDate.getFullYear().toString() === currentDateFilter;
-                    }
-                });
-            }
-            
-            if (isUnpaidFilter) {
-                filtered = filtered.filter(record => {
-                    const amountReceived = record.properties['Amount Received'];
-                    return !amountReceived || 
-                           !amountReceived.number || 
-                           amountReceived.number === 0 || 
-                           amountReceived.number === null;
-                });
-            }
-            
-            return filtered;
-        }
+        });
+    }
+
+    // Unpaid filter
+    if (isUnpaidFilter) {
+        filtered = filtered.filter(record => {
+            const amountReceived = record.properties['Amount Received'];
+            const val = amountReceived?.number;
+            return val === undefined || val === null || val === 0;
+        });
+    }
+
+    return filtered;
+}
         
         function updatePagination(totalPages, totalRecords) {
             const paginationContainer = document.getElementById('paginationContainer');
