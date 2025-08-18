@@ -602,28 +602,44 @@
             applyFilters();
         }
 
+        // Make sure loadData is globally available for the refresh button
+        window.loadData = loadData;
+
         // Auto-load on page load
         window.addEventListener('load', function() {
+            console.log('Window loaded, starting initialization...');
+            
             const urlParams = new URLSearchParams(window.location.search);
             const userEmail = urlParams.get('userEmail');
             
+            console.log('Checking URL parameters...');
+            console.log('userEmail from URL:', userEmail);
+            
             if (!userEmail) {
+                console.error('No userEmail parameter found in URL');
                 showError('No user specified. Please access through proper link.');
                 return;
             }
             
             currentUserEmail = userEmail;
-            document.getElementById('userEmail').textContent = userEmail;
+            const userEmailElement = document.getElementById('userEmail');
+            if (userEmailElement) {
+                userEmailElement.textContent = userEmail;
+            }
             
-            console.log("Loading data for user:", userEmail);
+            console.log("Starting loadData for user:", userEmail);
             loadData();
         });
 
         // Search functionality
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, setting up search...');
             const searchBox = document.getElementById('searchBox');
             if (searchBox) {
                 searchBox.addEventListener('input', filterData);
+                console.log('Search box event listener added');
+            } else {
+                console.log('Search box not found during DOMContentLoaded');
             }
         });
 
