@@ -407,32 +407,24 @@ function getPropertyValue(property) {
     return '';
             
         // FORMULA FIELDS  
-     case 'formula':
-    if (!property.formula) {
-        console.log('Formula property has no formula data:', property);
-        return '';
-    }
+    case 'formula':
+    if (!property.formula) return '';
     
-    console.log('Processing formula:', property.formula); // Debug line
+    // Handle different formula result types
+    const formulaResult = property.formula;
     
-    switch (property.formula.type) {
-        case 'string':
-            const stringResult = property.formula.string || '';
-            console.log('Formula string result:', stringResult); // Debug line
-            return stringResult;
-        case 'number':
-            return property.formula.number ? property.formula.number.toLocaleString() : '';
-        case 'boolean':
-            return property.formula.boolean ? '✅' : '❌';
-        case 'date':
-            if (property.formula.date) {
-                const date = new Date(property.formula.date.start);
-                return date.toLocaleDateString();
-            }
-            return '';
-        default:
-            console.log('Unknown formula type:', property.formula.type, property.formula);
-            return JSON.stringify(property.formula).substring(0, 100);
+    if (formulaResult.type === 'string') {
+        return formulaResult.string || '';
+    } else if (formulaResult.type === 'number') {
+        return formulaResult.number !== null ? formulaResult.number.toLocaleString() : '';
+    } else if (formulaResult.type === 'boolean') {
+        return formulaResult.boolean ? '✅' : '❌';
+    } else if (formulaResult.type === 'date') {
+        return formulaResult.date ? new Date(formulaResult.date.start).toLocaleDateString() : '';
+    } else {
+        // For any other types or null results
+        console.log('Unhandled formula result:', formulaResult);
+        return formulaResult.string || formulaResult.number || '';
     }
             
         // ROLLUP FIELDS
