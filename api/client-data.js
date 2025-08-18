@@ -34,17 +34,103 @@ export default async function handler(req, res) {
   }
   
   try {
-    const requestBody = {
-      page_size: 100,
-      filter: {
-        property: "Client",
-        select: {
-          equals: clientName
+    // Fetch all records with pagination
+    let allResults = [];
+    let hasMore = true;
+    let nextCursor = null;
+    
+    while (hasMore) {
+      const requestBody = {
+        page_size: 100,
+        filter: {
+          property: "Client",
+          select: {
+            equals: clientName
+          }
         }
+      };
+      
+      if (nextCursor) {
+        requestBody.start_cursor = nextCursor;
       }
+      
+      const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_TOKEN}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Notion API error: ${response.status}`);
+      }
+      
+      const pageData = await response.json();
+      allResults = [...allResults, ...pageData.results];
+      
+      hasMore = pageData.has_more;
+      nextCursor = pageData.next_cursor;
+    }
+    
+    // Create data object with all results
+    const data = { 
+      results: allResults,
+      has_more: false,
+      next_cursor: null
     };
     
     console.log(`Secure access granted: ${clientName}, user: ${userEmail}`);
+    
+    // Fetch all records with pagination
+    let allResults = [];
+    let hasMore = true;
+    let nextCursor = null;
+    
+    while (hasMore) {
+      const requestBody = {
+        page_size: 100,
+        filter: {
+          property: "Client",
+          select: {
+            equals: clientName
+          }
+        }
+      };
+      
+      if (nextCursor) {
+        requestBody.start_cursor = nextCursor;
+      }
+      
+      const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_TOKEN}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Notion API error: ${response.status}`);
+      }
+      
+      const pageData = await response.json();
+      allResults = [...allResults, ...pageData.results];
+      
+      hasMore = pageData.has_more;
+      nextCursor = pageData.next_cursor;
+    }
+    
+    // Create data object with all results
+    const data = { 
+      results: allResults,
+      has_more: false,
+      next_cursor: null
+    };
     
     const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
       method: 'POST',
