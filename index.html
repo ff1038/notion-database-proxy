@@ -230,21 +230,21 @@
 // Update the loadData function in index.html
 async function loadData() {
     const tableContent = document.getElementById('tableContent');
-    tableContent.innerHTML = '<div class="loading">Authenticating and loading your data...</div>';
+    tableContent.innerHTML = '<div class="loading">Verifying access and loading your data...</div>';
 
     try {
         const urlParams = new URLSearchParams(window.location.search);
         const userEmail = urlParams.get('userEmail');
-        const authToken = urlParams.get('authToken');
+        const secureKey = urlParams.get('secureKey');
         const timestamp = urlParams.get('timestamp');
         
-        if (!userEmail || !authToken || !timestamp) {
+        if (!userEmail || !secureKey || !timestamp) {
             throw new Error('Missing authentication parameters');
         }
         
-        console.log("Authenticating user:", userEmail);
+        console.log("Verifying secure access for:", userEmail);
         
-        const response = await fetch(`/api/client-data?userEmail=${encodeURIComponent(userEmail)}&authToken=${authToken}&timestamp=${timestamp}`, {
+        const response = await fetch(`/api/client-data?userEmail=${encodeURIComponent(userEmail)}&secureKey=${secureKey}&timestamp=${timestamp}`, {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
@@ -254,11 +254,11 @@ async function loadData() {
         
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(errorData.error || `Authentication failed: ${response.status}`);
+            throw new Error(errorData.error || `Access denied: ${response.status}`);
         }
 
         const data = await response.json();
-        console.log("Authenticated data received:", data);
+        console.log("Secure access granted, data received:", data);
         
         if (data.authorizedClient) {
             document.getElementById('clientDisplay').textContent = `${data.authorizedClient} Dashboard`;
@@ -267,8 +267,8 @@ async function loadData() {
         displayDataAsTable(data);
         
     } catch (error) {
-        console.error('Authentication error:', error);
-        showError(`Authentication failed: ${error.message}<br><br>Please log in to your account and try again.`);
+        console.error('Access verification error:', error);
+        showError(`Access Denied: ${error.message}<br><br>Please access this dashboard through the official website.`);
     }
 }
 
