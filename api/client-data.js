@@ -153,7 +153,7 @@ function getClientForUser(userEmail) {
 function verifySecureKey(userEmail, secureKey, timestamp) {
   try {
     const userSecureKeys = {
-      'nick@sayshey.com': 'ke-' + Buffer.from('king-ed-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'nick@sayshey.com': 'ke-' + Buffer.from('king-ed-2025').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
       'client.a@company.com': 'ca-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
       'client.b@business.com': 'cb-' + Buffer.from('client-b-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
     };
