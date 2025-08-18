@@ -131,22 +131,6 @@ export default async function handler(req, res) {
       has_more: false,
       next_cursor: null
     };
-    
-    const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Notion API error: ${response.status}`);
-    }
-    
-    const data = await response.json();
 
     // Add this after fetching the main data
     if (data.results) {
