@@ -118,10 +118,63 @@ export default async function handler(req, res) {
     
     console.log('6. Total records retrieved:', data.results?.length || 0);
     
-    console.log('7. Applying column configuration...');
+    console.log('7. Processing relation fields...');
+    if (data.results && data.results.length > 0) {
+      let relationProcessCount = 0;
+      
+      for (let i = 0; i < data.results.length; i++) {
+        const record = data.results[i];
+        
+        for (const [key, property] of Object.entries(record.properties)) {
+          if (property.type === 'relation' && property.relation && property.relation.length > 0) {
+            try {
+              relationProcessCount++;
+              console.log(`Processing relation ${relationProcessCount}: ${key} for record ${i + 1}`);
+              
+              // Only process the first relation to keep it simple
+              const firstRelation = property.relation[0];
+              
+              const pageResponse = await fetch(`https://api.notion.com/v1/pages/${firstRelation.id}`, {
+                headers: {
+                  'Authorization': `Bearer ${NOTION_TOKEN}`,
+                  'Notion-Version': '2022-06-28'
+                }
+              });
+              
+              if (pageResponse.ok) {
+                const pageData = await pageResponse.json();
+                const titleProperty = Object.values(pageData.properties).find(p => p.type === 'title');
+                
+                if (titleProperty && titleProperty.title && titleProperty.title.length > 0) {
+                  property.relation_titles = titleProperty.title[0].plain_text;
+                  console.log(`✓ Relation ${key} resolved to: ${property.relation_titles}`);
+                } else {
+                  console.log(`⚠ No title found for relation ${key}`);
+                }
+              } else {
+                console.log(`⚠ Failed to fetch relation page for ${key}: ${pageResponse.status}`);
+              }
+              
+              // Add a small delay to avoid rate limiting
+              if (relationProcessCount % 5 === 0) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+              }
+              
+            } catch (error) {
+              console.error(`Error processing relation ${key}:`, error.message);
+              // Continue processing other relations
+            }
+          }
+        }
+      }
+      
+      console.log(`Processed ${relationProcessCount} relation fields`);
+    }
+    
+    console.log('8. Applying column configuration...');
     const columnConfig = getUniversalColumnConfig();
     
-    console.log('8. Sending response...');
+    console.log('9. Sending response...');
     res.status(200).json({
       results: data.results,
       authorizedClient: clientName,
@@ -132,6 +185,15 @@ export default async function handler(req, res) {
         recordCount: data.results?.length || 0,
         hasMore: data.has_more,
         timestamp: new Date().toISOString()
+      },
+      // Add metadata for filters
+      metadata: {
+        incomeTypes: [...new Set(data.results.map(record => 
+          record.properties['Income Type']?.select?.name
+        ).filter(Boolean))],
+        currencies: [...new Set(data.results.map(record => 
+          record.properties['Currency']?.select?.name
+        ).filter(Boolean))]
       }
     });
     
@@ -170,7 +232,8 @@ function getUniversalColumnConfig() {
       'Net Commissionable',
       'Commission %',
       'Mgmt Commission',
-      'Mgmt Inv #'
+      'Mgmt Inv #',
+      'VOID?' // Add the VOID field to columns
     ],
     columnHeaders: {
       'Invoice date': 'Date (Inv/Stmt)',
@@ -188,7 +251,8 @@ function getUniversalColumnConfig() {
       'Net Commissionable': 'Net Commissionable',
       'Commission %': 'Commission %',
       'Mgmt Commission': 'Mgmt Commission',
-      'Mgmt Inv #': 'Mgmt Inv #'
+      'Mgmt Inv #': 'Mgmt Inv #',
+      'VOID?': 'VOID'
     }
   };
 }
