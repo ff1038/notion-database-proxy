@@ -505,7 +505,7 @@
   <div class="controls-right">
     <input type="text" id="searchBox" class="search-box" placeholder="Search data..." />
                 <div class="table-actions">
-  <button class="export-btn" onclick="exportToCSV()">⬇ Export CSV</button>
+<button class="export-btn" id="exportCsvBtn" onclick="exportCSV()">⬇ Export CSV</button>
 </div>
     <span id="recordCount" class="record-count"></span>
   </div>
@@ -1232,33 +1232,121 @@ function updateSummaryBoxes() {
 
         window.loadData = loadData;
 
-        function exportToCSV() {
-  const table = document.getElementById("data-table");
-  if (!table) return;
+function csvEscape(val){
+  if (val === null || val === undefined) return '""';
+  const s = String(val).replace(/\r?\n|\r/g, ' ').replace(/"/g, '""');
+  return `"${s}"`;
+}
 
-  let csv = [];
-  const rows = table.querySelectorAll("tr");
-
-  for (let row of rows) {
-    let cols = row.querySelectorAll("th, td");
-    let rowData = [];
-    for (let col of cols) {
-      // Escape quotes by doubling them
-      let text = col.innerText.replace(/"/g, '""');
-      rowData.push(`"${text}"`);
+function getPlainValue(property, columnName){
+  if (!property) return '';
+  switch (property.type) {
+    case 'title':      return property.title.map(t=>t.plain_text).join('');
+    case 'rich_text':  return property.rich_text.map(t=>t.plain_text).join('');
+    case 'number':     return property.number ?? '';
+    case 'select':     return property.select?.name || '';
+    case 'multi_select': return property.multi_select.map(t=>t.name).join('; ');
+    case 'date':       return property.date ? formatDate(property.date.start) : '';
+    case 'checkbox':   return property.checkbox ? 'TRUE' : 'FALSE';
+    case 'url':        return property.url || '';
+    case 'email':      return property.email || '';
+    case 'phone_number': return property.phone_number || '';
+    case 'status':     return property.status?.name || '';
+    case 'people':     return (property.people||[]).map(p=>p.name).join('; ');
+    case 'relation':
+      if (property.relation_titles) return property.relation_titles;
+      if (property.relation?.length) return `${property.relation.length} linked`;
+      return '';
+    case 'formula': {
+      const f = property.formula; if (!f) return '';
+      if (f.type==='string') return f.string || '';
+      if (f.type==='number') return f.number ?? '';
+      if (f.type==='boolean') return f.boolean ? 'TRUE' : 'FALSE';
+      if (f.type==='date') return f.date ? formatDate(f.date.start) : '';
+      return '';
     }
-    csv.push(rowData.join(","));
+    case 'rollup': {
+      const r = property.rollup; if (!r) return '';
+      if (r.type==='number') return r.number ?? '';
+      if (r.type==='date')   return r.date ? formatDate(r.date.start) : '';
+      if (r.type==='array'){
+        return r.array.map(item=>{
+          if (item.type==='number') return item.number ?? '';
+          if (item.type==='rich_text') return item.rich_text.map(t=>t.plain_text).join('');
+          if (item.type==='title') return item.title.map(t=>t.plain_text).join('');
+          return '';
+        }).filter(Boolean).join('; ');
+      }
+      return '';
+    }
+    case 'files': return (property.files||[]).map(f=>f.name || f.file?.url || f.external?.url).join('; ');
+    case 'created_time':     return formatDate(property.created_time);
+    case 'last_edited_time': return formatDate(property.last_edited_time);
+    case 'created_by':       return property.created_by?.name || '';
+    case 'last_edited_by':   return property.last_edited_by?.name || '';
+    default: return '';
   }
+}
 
-  // Download CSV file
-  const blob = new Blob([csv.join("\n")], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.setAttribute("download", "dashboard-data.csv");
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+function getActiveColumns(){
+  if (!currentData) return [];
+  const data = currentData;
+  const order = data.columnOrder || [];
+  if (order.length){
+    return order.filter(col => data.results.some(r => r.properties[col]));
+  }
+  const set = new Set();
+  data.results.forEach(r => {
+    Object.keys(r.properties||{}).forEach(p => { if (p!=='Client') set.add(p); });
+  });
+  return Array.from(set);
+}
+
+function getActiveRows(){
+  return (filteredData || (currentData ? currentData.results : [])) || [];
+}
+
+function exportCSV(){
+  try {
+    if (!currentData || !currentData.results) {
+      alert('Data not loaded yet.'); 
+      return;
+    }
+
+    const cols = getActiveColumns();
+    const headersMap = currentData.columnHeaders || {};
+    const headerRow = cols.map(c => csvEscape(headersMap[c] || c)).join(',');
+
+    const rows = getActiveRows();
+    const csvLines = [headerRow];
+
+    rows.forEach(rec => {
+      const row = cols.map(col => {
+        const plain = getPlainValue(rec.properties?.[col], col);
+        return csvEscape(plain);
+      }).join(',');
+      csvLines.push(row);
+    });
+
+    const csv = '\uFEFF' + csvLines.join('\n'); // BOM for Excel
+    const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+
+    const client = (document.getElementById('clientDisplay')?.textContent || 'data')
+                   .replace(/\s+Dashboard$/,'').trim();
+    a.href = url;
+    a.download = `dashboard-${client}-${new Date().toISOString().slice(0,10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    console.log(`Exported ${rows.length} rows, ${cols.length} columns`);
+  } catch (e){
+    console.error('CSV export failed:', e);
+    alert('Sorry, CSV export failed. See console for details.');
+  }
 }
     </script>
 </body>
