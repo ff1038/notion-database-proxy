@@ -151,7 +151,7 @@ function getUniversalColumnConfig() {
     columns: [
       'Invoice date',           // Adjust these to match your actual Notion columns
       'Inv #',
-      'Vendor',
+      'Vendor2',
       'Description',
       'Income Type',
       'Net',
