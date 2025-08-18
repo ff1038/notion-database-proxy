@@ -273,61 +273,75 @@ async function loadData() {
     }
 }
 
-        function displayDataAsTable(data) {
-            const tableContent = document.getElementById('tableContent');
-            const recordCount = document.getElementById('recordCount');
-            
-            if (!data.results || data.results.length === 0) {
-                tableContent.innerHTML = `
-                    <div class="no-data">
-                        <h3>No data found for your account</h3>
-                        <p>Contact your administrator if you believe this is an error.</p>
-                    </div>
-                `;
-                recordCount.textContent = '0 records';
-                return;
-            }
-
-            recordCount.textContent = `${data.results.length} record${data.results.length !== 1 ? 's' : ''}`;
-
-            // Get all properties except Client
-            const properties = new Set();
-            data.results.forEach(record => {
-                Object.keys(record.properties).forEach(prop => {
-                    if (prop !== 'Client') properties.add(prop);
-                });
-            });
-
-            let html = `
-                <div class="table-wrapper">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-            `;
-
-            // Create headers
-            Array.from(properties).forEach(prop => {
-                html += `<th>${prop}</th>`;
-            });
-            html += `</tr></thead><tbody>`;
-
-            // Create rows
-            data.results.forEach(record => {
-                html += '<tr>';
-                Array.from(properties).forEach(prop => {
-                    const property = record.properties[prop];
-                    const value = property ? getPropertyValue(property) : '';
-                    html += `<td>${value}</td>`;
-                });
-                html += '</tr>';
-            });
-
-            html += '</tbody></table></div>';
-            tableContent.innerHTML = html;
+function displayDataAsTable(data) {
+    const tableContent = document.getElementById('tableContent');
+    const recordCount = document.getElementById('recordCount');
+    
+    if (!data.results || data.results.length === 0) {
+        tableContent.innerHTML = `
+            <div class="no-data">
+                <h3>No data found for your account</h3>
+                <p>Contact your administrator if you believe this is an error.</p>
+            </div>
+        `;
+        recordCount.textContent = '0 records';
+        return;
+    }
+    recordCount.textContent = `${data.results.length} record${data.results.length !== 1 ? 's' : ''}`;
+    
+    // Get all properties except Client
+    const properties = new Set();
+    data.results.forEach(record => {
+        Object.keys(record.properties).forEach(prop => {
+            if (prop !== 'Client') properties.add(prop);
+        });
+    });
+    
+    let html = `
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+    `;
+    
+    // Create headers
+    Array.from(properties).forEach(prop => {
+        html += `<th>${prop}</th>`;
+    });
+    html += `</tr></thead><tbody>`;
+    
+    // Create rows
+    data.results.forEach((record, index) => {
+        // ADD LOGGING HERE - Debug the first record
+        if (index === 0) {
+            console.log('=== VENDOR RELATION DEBUG ===');
+            console.log('All properties:', Object.keys(record.properties));
+            console.log('Vendor property exists:', 'Vendor' in record.properties);
+            console.log('Vendor property full object:', JSON.stringify(record.properties['Vendor'], null, 2));
         }
+        
+        html += '<tr>';
+        Array.from(properties).forEach(prop => {
+            const property = record.properties[prop];
+            const value = property ? getPropertyValue(property) : '';
+            html += `<td>${value}</td>`;
+        });
+        html += '</tr>';
+    });
+    
+    html += '</tbody></table></div>';
+    tableContent.innerHTML = html;
+}
 
 function getPropertyValue(property) {
     if (!property) return '';
+
+        // Add this debug line at the start
+    if (property.type === 'relation') {
+        console.log('=== RELATION PROPERTY DEBUG ===');
+        console.log('Property type:', property.type);
+        console.log('Full property object:', JSON.stringify(property, null, 2));
+    }
     
     switch (property.type) {
         case 'title':
@@ -374,16 +388,24 @@ function getPropertyValue(property) {
         case 'people':
             return property.people.map(person => `👤 ${person.name}`).join(', ');
             
-        // RELATION FIELDS
-   case 'relation':
+// RELATION FIELDS
+case 'relation':
+    console.log('Processing relation field:', property);
+    console.log('Relation array:', property.relation);
+    console.log('Relation titles:', property.relation_titles);
+    
     if (property.relation && property.relation.length > 0) {
         // Check if we have enhanced relation titles first
         if (property.relation_titles) {
+            console.log('Returning relation titles:', property.relation_titles);
             return property.relation_titles;
         }
         // Show the first relation ID or a more descriptive message
-        return `Vendor ID: ${property.relation[0].id.slice(-8)}`;
+        const result = `Vendor ID: ${property.relation[0].id.slice(-8)}`;
+        console.log('Returning relation result:', result);
+        return result;
     }
+    console.log('Returning empty for relation - no relation data');
     return '';
             
         // FORMULA FIELDS  
