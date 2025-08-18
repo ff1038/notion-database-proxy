@@ -1,4 +1,4 @@
-// api/client-data.js - With Wix member authentication
+// api/client-data.js - With secure key authentication
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -11,21 +11,20 @@ export default async function handler(req, res) {
   
   const NOTION_TOKEN = process.env.NOTION_TOKEN;
   const DATABASE_ID = process.env.NOTION_DATABASE_ID;
-  const AUTH_SECRET = process.env.AUTH_SECRET; // Add this to Vercel env vars
   
-  if (!NOTION_TOKEN || !DATABASE_ID || !AUTH_SECRET) {
+  if (!NOTION_TOKEN || !DATABASE_ID) {
     return res.status(500).json({ error: 'Server configuration error' });
   }
   
-  const { userEmail, authToken, timestamp } = req.query;
+  const { userEmail, secureKey, timestamp } = req.query;
   
-  if (!userEmail || !authToken || !timestamp) {
+  if (!userEmail || !secureKey || !timestamp) {
     return res.status(401).json({ error: 'Missing authentication parameters' });
   }
   
-  // Verify the authentication token
-  if (!verifyWixMemberToken(userEmail, authToken, timestamp, AUTH_SECRET)) {
-    return res.status(401).json({ error: 'Invalid authentication token' });
+  // Verify the secure key for this user
+  if (!verifySecureKey(userEmail, secureKey, timestamp)) {
+    return res.status(401).json({ error: 'Invalid access credentials' });
   }
   
   // Get client for this authenticated user
@@ -45,7 +44,7 @@ export default async function handler(req, res) {
       }
     };
     
-    console.log(`Authenticated request: ${clientName}, user: ${userEmail}`);
+    console.log(`Secure access granted: ${clientName}, user: ${userEmail}`);
     
     const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
       method: 'POST',
@@ -75,37 +74,45 @@ export default async function handler(req, res) {
   }
 }
 
-function verifyWixMemberToken(userEmail, authToken, timestamp, secret) {
+function verifySecureKey(userEmail, secureKey, timestamp) {
   try {
-    // Check if timestamp is recent (within 1 hour)
-    const now = Math.floor(Date.now() / 1000);
-    const tokenTime = parseInt(timestamp);
-    const timeDiff = now - tokenTime;
+    // Define secure keys for each user
+    const userSecureKeys = {
+      'nick@sayshey.com': 'ke-' + Buffer.from('king-ed-2025').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'client.a@company.com': 'ca-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'client.b@business.com': 'cb-' + Buffer.from('client-b-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      // Add more clients here with unique keys
+    };
     
-    if (timeDiff > 3600 || timeDiff < 0) { // 1 hour window
-      console.log('Token expired or invalid timestamp');
+    const expectedKey = userSecureKeys[userEmail.toLowerCase()];
+    
+    if (!expectedKey) {
+      console.log('No secure key defined for user:', userEmail);
       return false;
     }
     
-    // Generate expected token
-    const expectedToken = generateMemberToken(userEmail, timestamp, secret);
+    if (secureKey !== expectedKey) {
+      console.log('Secure key mismatch for user:', userEmail);
+      return false;
+    }
     
-    // Compare tokens
-    const isValid = authToken === expectedToken;
-    console.log(`Token validation: ${isValid} for user: ${userEmail}`);
+    // Check if timestamp is recent (within 1 hour for security)
+    const now = Math.floor(Date.now() / 1000);
+    const requestTime = parseInt(timestamp);
+    const timeDiff = now - requestTime;
     
-    return isValid;
+    if (timeDiff > 3600 || timeDiff < -300) { // 1 hour window, 5 min future tolerance
+      console.log('Timestamp outside valid window');
+      return false;
+    }
+    
+    console.log(`Valid secure access for: ${userEmail}`);
+    return true;
+    
   } catch (error) {
-    console.error('Token verification error:', error);
+    console.error('Secure key verification error:', error);
     return false;
   }
-}
-
-function generateMemberToken(userEmail, timestamp, secret) {
-  // Simple but secure token generation
-  const crypto = require('crypto');
-  const payload = `${userEmail}:${timestamp}:${secret}`;
-  return crypto.createHash('sha256').update(payload).digest('hex').substring(0, 16);
 }
 
 function getClientForUser(userEmail) {
