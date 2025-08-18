@@ -510,6 +510,98 @@
         let selectedIncomeType = '';
         let selectedCurrency = '';
 
+        // Define all filter functions first
+        function applyDateFilter(filter) {
+            // Update active filter button
+            document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            currentDateFilter = filter;
+            isUnpaidFilter = false;
+            
+            // Update unpaid filter button
+            const unpaidBtn = document.querySelector('.unpaid-filter');
+            if (unpaidBtn) unpaidBtn.classList.remove('active');
+            
+            applyFilters();
+        }
+        
+        function applyUnpaidFilter() {
+            // Toggle unpaid filter
+            isUnpaidFilter = !isUnpaidFilter;
+            
+            const unpaidBtn = document.querySelector('.unpaid-filter');
+            if (isUnpaidFilter) {
+                unpaidBtn.classList.add('active');
+                // Clear date filter selection
+                document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                currentDateFilter = 'all';
+            } else {
+                unpaidBtn.classList.remove('active');
+                // Reset to "All Time"
+                currentDateFilter = 'all';
+                const allTimeBtn = document.querySelector('.filter-btn');
+                if (allTimeBtn) allTimeBtn.classList.add('active');
+            }
+            
+            applyFilters();
+        }
+
+        function toggleVoidFilter() {
+            showVoidedItems = !showVoidedItems;
+            
+            const voidBtn = document.querySelector('.void-filter');
+            if (showVoidedItems) {
+                voidBtn.classList.add('active');
+                voidBtn.textContent = 'Hide Voided';
+            } else {
+                voidBtn.classList.remove('active');
+                voidBtn.textContent = 'Show Voided';
+            }
+            
+            applyFilters();
+        }
+
+        function applyDropdownFilters() {
+            const incomeTypeFilter = document.getElementById('incomeTypeFilter');
+            const currencyFilter = document.getElementById('currencyFilter');
+            
+            selectedIncomeType = incomeTypeFilter ? incomeTypeFilter.value : '';
+            selectedCurrency = currencyFilter ? currencyFilter.value : '';
+            applyFilters();
+        }
+
+        function applyFilters() {
+            if (!currentData) return;
+            
+            filteredData = getFilteredDataByDateAndUnpaid();
+            
+            // Apply search filter if there's a search term
+            const searchBox = document.getElementById('searchBox');
+            const searchTerm = searchBox ? searchBox.value.toLowerCase().trim() : '';
+            if (searchTerm) {
+                filteredData = filteredData.filter(record => {
+                    const searchableText = Object.values(record.properties).map(property => {
+                        if (!property) return '';
+                        return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
+                    }).join(' ');
+                    
+                    return searchableText.includes(searchTerm);
+                });
+            }
+            
+            currentPage = 1;
+            displayDataAsTable(currentData);
+        }
+
+        function filterData() {
+            applyFilters();
+        }
+
         // Auto-load on page load
         window.addEventListener('load', function() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -774,91 +866,6 @@
                 default:
                     return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
             }
-        }
-
-        function applyDateFilter(filter) {
-            // Update active filter button
-            document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            event.target.classList.add('active');
-            
-            currentDateFilter = filter;
-            isUnpaidFilter = false;
-            
-            // Update unpaid filter button
-            document.querySelector('.unpaid-filter').classList.remove('active');
-            
-            applyFilters();
-        }
-        
-        function applyUnpaidFilter() {
-            // Toggle unpaid filter
-            isUnpaidFilter = !isUnpaidFilter;
-            
-            const unpaidBtn = document.querySelector('.unpaid-filter');
-            if (isUnpaidFilter) {
-                unpaidBtn.classList.add('active');
-                // Clear date filter selection
-                document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                currentDateFilter = 'all';
-            } else {
-                unpaidBtn.classList.remove('active');
-                // Reset to "All Time"
-                currentDateFilter = 'all';
-                document.querySelector('.filter-btn').classList.add('active');
-            }
-            
-            applyFilters();
-        }
-
-        function toggleVoidFilter() {
-            showVoidedItems = !showVoidedItems;
-            
-            const voidBtn = document.querySelector('.void-filter');
-            if (showVoidedItems) {
-                voidBtn.classList.add('active');
-                voidBtn.textContent = 'Hide Voided';
-            } else {
-                voidBtn.classList.remove('active');
-                voidBtn.textContent = 'Show Voided';
-            }
-            
-            applyFilters();
-        }
-
-        function applyDropdownFilters() {
-            selectedIncomeType = document.getElementById('incomeTypeFilter').value;
-            selectedCurrency = document.getElementById('currencyFilter').value;
-            applyFilters();
-        }
-
-        function filterData() {
-            const searchTerm = document.getElementById('searchBox').value.toLowerCase().trim();
-            
-            if (!searchTerm) {
-                // If no search term, use the current date/unpaid filter
-                applyFilters();
-                return;
-            }
-            
-            // Start with date/unpaid filtered data
-            let baseData = getFilteredDataByDateAndUnpaid();
-            
-            // Apply search filter
-            filteredData = baseData.filter(record => {
-                const searchableText = Object.values(record.properties).map(property => {
-                    if (!property) return '';
-                    return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
-                }).join(' ');
-                
-                return searchableText.includes(searchTerm);
-            });
-            
-            currentPage = 1;
-            displayDataAsTable(currentData);
         }
         
         function applyFilters() {
