@@ -169,7 +169,7 @@ function getUniversalColumnConfig() {
     columnHeaders: {
       'Invoice date': 'Date (Inv/Stmt)',
       'Inv #': 'Invoice #',
-      'Vendor1': 'Vendor1',
+      'Vendor': 'Vendor1',
       'Description': 'Description',
       'Income Type': 'Income Type',
       'Net': 'Net Amount',
