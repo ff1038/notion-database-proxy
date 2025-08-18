@@ -51,19 +51,9 @@ export default async function handler(req, res) {
     }
     
     console.log('5. Making Notion API request with pagination...');
-    
-    // Fetch all records with pagination
-    let allResults = [];
-    let hasMore = true;
-    let nextCursor = null;
-    let pageCount = 0;
-    
-    while (hasMore && pageCount < 10) { // Safety limit of 10 pages (1000 records)
-      pageCount++;
-      console.log(`Fetching page ${pageCount}...`);
       
       const requestBody = {
-        page_size: 100,
+        page_size: 15,
         filter: {
           property: "Client",
           select: {
@@ -72,11 +62,6 @@ export default async function handler(req, res) {
         }
       };
       
-      if (nextCursor) {
-        requestBody.start_cursor = nextCursor;
-      }
-      
-      console.log(`Page ${pageCount} request body:`, JSON.stringify(requestBody, null, 2));
       
       const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
         method: 'POST',
@@ -90,21 +75,14 @@ export default async function handler(req, res) {
       
       console.log(`Page ${pageCount} response status:`, response.status);
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Page ${pageCount} API error:`, errorText);
-        return res.status(500).json({ 
-          error: `Notion API error on page ${pageCount}: ${response.status}`,
-          details: errorText
-        });
-      }
-      
-      const pageData = await response.json();
-      console.log(`Page ${pageCount} retrieved:`, pageData.results?.length || 0, 'records');
-      
-      allResults = [...allResults, ...pageData.results];
-      hasMore = pageData.has_more;
-      nextCursor = pageData.next_cursor;
+    if (!response.ok) {
+  const errorText = await response.text();
+  console.error('API error:', errorText);
+  return res.status(500).json({ error: 'Notion API error', details: errorText });
+}
+
+const pageData = await response.json();
+const allResults = pageData.results || [];
       
       console.log(`Total records so far: ${allResults.length}`);
     }
