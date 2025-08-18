@@ -50,42 +50,73 @@ export default async function handler(req, res) {
       return res.status(403).json({ error: 'No client access for user: ' + userEmail });
     }
     
-    console.log('5. Making Notion API request...');
-    const requestBody = {
-      page_size: 10, // Start with just 10 records
-      filter: {
-        property: "Client",
-        select: {
-          equals: clientName
+    console.log('5. Making Notion API request with pagination...');
+    
+    // Fetch all records with pagination
+    let allResults = [];
+    let hasMore = true;
+    let nextCursor = null;
+    let pageCount = 0;
+    
+    while (hasMore && pageCount < 10) { // Safety limit of 10 pages (1000 records)
+      pageCount++;
+      console.log(`Fetching page ${pageCount}...`);
+      
+      const requestBody = {
+        page_size: 100,
+        filter: {
+          property: "Client",
+          select: {
+            equals: clientName
+          }
         }
+      };
+      
+      if (nextCursor) {
+        requestBody.start_cursor = nextCursor;
       }
-    };
-    
-    console.log('Request body:', JSON.stringify(requestBody, null, 2));
-    
-    const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
-    
-    console.log('Notion API response status:', response.status);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Notion API error response:', errorText);
-      return res.status(500).json({ 
-        error: `Notion API error: ${response.status}`,
-        details: errorText
+      
+      console.log(`Page ${pageCount} request body:`, JSON.stringify(requestBody, null, 2));
+      
+      const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_TOKEN}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
       });
+      
+      console.log(`Page ${pageCount} response status:`, response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Page ${pageCount} API error:`, errorText);
+        return res.status(500).json({ 
+          error: `Notion API error on page ${pageCount}: ${response.status}`,
+          details: errorText
+        });
+      }
+      
+      const pageData = await response.json();
+      console.log(`Page ${pageCount} retrieved:`, pageData.results?.length || 0, 'records');
+      
+      allResults = [...allResults, ...pageData.results];
+      hasMore = pageData.has_more;
+      nextCursor = pageData.next_cursor;
+      
+      console.log(`Total records so far: ${allResults.length}`);
     }
     
-    const data = await response.json();
-    console.log('6. Retrieved records:', data.results?.length || 0);
+    // Create combined data object
+    const data = {
+      results: allResults,
+      has_more: false,
+      next_cursor: null
+    };
+    
+    console.log('6. Total records retrieved:', data.results?.length || 0);
     
     console.log('7. Applying column configuration...');
     const columnConfig = getUniversalColumnConfig();
