@@ -1,6 +1,5 @@
-// api/client-data.js - Single endpoint for client data
+// api/client-data.js - With Wix member authentication
 export default async function handler(req, res) {
-  // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -12,25 +11,30 @@ export default async function handler(req, res) {
   
   const NOTION_TOKEN = process.env.NOTION_TOKEN;
   const DATABASE_ID = process.env.NOTION_DATABASE_ID;
+  const AUTH_SECRET = process.env.AUTH_SECRET; // Add this to Vercel env vars
   
-  if (!NOTION_TOKEN || !DATABASE_ID) {
+  if (!NOTION_TOKEN || !DATABASE_ID || !AUTH_SECRET) {
     return res.status(500).json({ error: 'Server configuration error' });
   }
   
-  const { userEmail } = req.query;
+  const { userEmail, authToken, timestamp } = req.query;
   
-  if (!userEmail) {
-    return res.status(400).json({ error: 'Missing userEmail parameter' });
+  if (!userEmail || !authToken || !timestamp) {
+    return res.status(401).json({ error: 'Missing authentication parameters' });
   }
   
-  // Get client for this user
+  // Verify the authentication token
+  if (!verifyWixMemberToken(userEmail, authToken, timestamp, AUTH_SECRET)) {
+    return res.status(401).json({ error: 'Invalid authentication token' });
+  }
+  
+  // Get client for this authenticated user
   const clientName = getClientForUser(userEmail);
   if (!clientName) {
     return res.status(403).json({ error: 'No client access for user: ' + userEmail });
   }
   
   try {
-    // Query Notion database
     const requestBody = {
       page_size: 100,
       filter: {
@@ -41,7 +45,7 @@ export default async function handler(req, res) {
       }
     };
     
-    console.log(`Fetching data for client: ${clientName}, user: ${userEmail}`);
+    console.log(`Authenticated request: ${clientName}, user: ${userEmail}`);
     
     const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
       method: 'POST',
@@ -59,7 +63,6 @@ export default async function handler(req, res) {
     
     const data = await response.json();
     
-    // Return data with client verification
     res.status(200).json({
       ...data,
       authorizedClient: clientName,
@@ -72,17 +75,45 @@ export default async function handler(req, res) {
   }
 }
 
+function verifyWixMemberToken(userEmail, authToken, timestamp, secret) {
+  try {
+    // Check if timestamp is recent (within 1 hour)
+    const now = Math.floor(Date.now() / 1000);
+    const tokenTime = parseInt(timestamp);
+    const timeDiff = now - tokenTime;
+    
+    if (timeDiff > 3600 || timeDiff < 0) { // 1 hour window
+      console.log('Token expired or invalid timestamp');
+      return false;
+    }
+    
+    // Generate expected token
+    const expectedToken = generateMemberToken(userEmail, timestamp, secret);
+    
+    // Compare tokens
+    const isValid = authToken === expectedToken;
+    console.log(`Token validation: ${isValid} for user: ${userEmail}`);
+    
+    return isValid;
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return false;
+  }
+}
+
+function generateMemberToken(userEmail, timestamp, secret) {
+  // Simple but secure token generation
+  const crypto = require('crypto');
+  const payload = `${userEmail}:${timestamp}:${secret}`;
+  return crypto.createHash('sha256').update(payload).digest('hex').substring(0, 16);
+}
+
 function getClientForUser(userEmail) {
   const userClientMap = {
-    'nicksayshey@gmail.com': 'Linden Jay',
     'nick@sayshey.com': 'King Ed',
     'client.a@company.com': 'Client A',      
     'client.b@business.com': 'Client B',
   };
   
-  console.log(`Looking up client for user: ${userEmail}`);
-  const client = userClientMap[userEmail?.toLowerCase()] || null;
-  console.log(`Found client: ${client}`);
-  
-  return client;
+  return userClientMap[userEmail?.toLowerCase()] || null;
 }
