@@ -418,9 +418,7 @@ case 'formula':
     }
     
     const formulaResult = property.formula;
-    console.log('Formula result type:', formulaResult.type);
-    console.log('Formula result value:', formulaResult);
-    
+            
     if (formulaResult.type === 'string') {
         console.log('String value:', formulaResult.string);
         return formulaResult.string || '';
