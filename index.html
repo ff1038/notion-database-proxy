@@ -374,14 +374,14 @@ function getPropertyValue(property) {
             return property.people.map(person => `👤 ${person.name}`).join(', ');
             
         // RELATION FIELDS
-       case 'relation':
+      case 'relation':
     if (property.relation && property.relation.length > 0) {
-        // Check if we have enhanced relation titles
+        // Check if we have enhanced relation titles first
         if (property.relation_titles) {
-            return `🔗 ${property.relation_titles}`;
+            return property.relation_titles;
         }
-        // Fallback to count
-        return `🔗 ${property.relation.length} related item${property.relation.length !== 1 ? 's' : ''}`;
+        // If no enhanced titles, show the relation count
+        return `${property.relation.length} linked item${property.relation.length !== 1 ? 's' : ''}`;
     }
     return '';
             
