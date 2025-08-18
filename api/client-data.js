@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   
   try {
     const requestBody = {
-      page_size: 10,
+      page_size: 100,
       filter: {
         property: "Client",
         select: {
@@ -63,52 +63,49 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     // Add this after fetching the main data
-if (data.results) {
-  // Process relation fields to get more meaningful data
-  data.results = await Promise.all(data.results.map(async (record) => {
-    const processedRecord = { ...record };
-    
-    // Process each property
-    for (const [key, property] of Object.entries(record.properties)) {
-      if (property.type === 'relation' && property.relation.length > 0) {
-        // For relation fields, you could fetch the related page titles
-        // This requires additional API calls, so use sparingly
-        try {
-          const relatedTitles = await Promise.all(
-            property.relation.slice(0, 3).map(async (rel) => { // Limit to first 3
-              const pageResponse = await fetch(`https://api.notion.com/v1/pages/${rel.id}`, {
-                headers: {
-                  'Authorization': `Bearer ${NOTION_TOKEN}`,
-                  'Notion-Version': '2022-06-28'
-                }
-              });
+    if (data.results) {
+      // Process relation fields to get more meaningful data
+      data.results = await Promise.all(data.results.map(async (record) => {
+        const processedRecord = { ...record };
+        
+        // Process each property
+        for (const [key, property] of Object.entries(record.properties)) {
+          if (property.type === 'relation' && property.relation.length > 0) {
+            // For relation fields, you could fetch the related page titles
+            // This requires additional API calls, so use sparingly
+            try {
+              const relatedTitles = await Promise.all(
+                property.relation.slice(0, 3).map(async (rel) => { // Limit to first 3
+                  const pageResponse = await fetch(`https://api.notion.com/v1/pages/${rel.id}`, {
+                    headers: {
+                      'Authorization': `Bearer ${NOTION_TOKEN}`,
+                      'Notion-Version': '2022-06-28'
+                    }
+                  });
+                  
+                  if (pageResponse.ok) {
+                    const pageData = await pageResponse.json();
+                    // Extract title from the page
+                    const titleProperty = Object.values(pageData.properties).find(p => p.type === 'title');
+                    if (titleProperty && titleProperty.title.length > 0) {
+                      return titleProperty.title[0].plain_text;
+                    }
+                  }
+                  return 'Related Item';
+                })
+              );
               
-              if (pageResponse.ok) {
-                const pageData = await pageResponse.json();
-                // Extract title from the page
-                const titleProperty = Object.values(pageData.properties).find(p => p.type === 'title');
-                if (titleProperty && titleProperty.title.length > 0) {
-                  return titleProperty.title[0].plain_text;
-                }
-              }
-              return 'Related Item';
-            })
-          );
-          
-          // Store the titles in a custom field
-          processedRecord.properties[key + '_titles'] = {
-            type: 'rich_text',
-            rich_text: [{ plain_text: relatedTitles.join(', ') + (property.relation.length > 3 ? '...' : '') }]
-          };
-        } catch (error) {
-          console.error('Error fetching relation data:', error);
+              // Store the titles in a custom field
+              processedRecord.properties[key].relation_titles = relatedTitles.join(', ') + (property.relation.length > 3 ? '...' : '');
+            } catch (error) {
+              console.error('Error fetching relation data:', error);
+            }
+          }
         }
-      }
+        
+        return processedRecord;
+      }));
     }
-    
-    return processedRecord;
-  }));
-}
     
     // Apply universal column configuration
     const columnConfig = getUniversalColumnConfig();
@@ -149,7 +146,7 @@ function getUniversalColumnConfig() {
   // Define the columns and headers that ALL clients will see
   return {
     columns: [
-      'Invoice date',           // Adjust these to match your actual Notion columns
+      'Invoice date',
       'Inv #',
       'Vendor1',
       'Description',
@@ -173,17 +170,16 @@ function getUniversalColumnConfig() {
       'Description': 'Description',
       'Income Type': 'Income Type',
       'Net': 'Net Amount',
-      'Assigned To': 'Gross Amount',
-      'Assigned To': 'Currency (Inv/Stmt)',
-      'Assigned To': 'Paid In Date',
-      'Assigned To': 'Amount Received',
-      'Assigned To': 'Currency (Received)',
-      'Assigned To': 'Adjustments',
-      'Assigned To': 'Net Commissionable',
-      'Assigned To': 'Commission %',
-      'Assigned To': 'Mgmt Commission',
-      'Assigned To': 'Mgmt Inv #'
-    
+      'Gross': 'Gross Amount',
+      'Currency': 'Currency (Inv/Stmt)',
+      'Paid in date': 'Paid In Date',
+      'Amount Received': 'Amount Received',
+      'Currency (receipt)': 'Currency (Received)',
+      'Adjustments': 'Adjustments',
+      'Net Commissionable': 'Net Commissionable',
+      'Commission %': 'Commission %',
+      'Mgmt Commission': 'Mgmt Commission',
+      'Mgmt Inv #': 'Mgmt Inv #'
     }
   };
 }
