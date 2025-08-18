@@ -407,13 +407,20 @@ function getPropertyValue(property) {
     return '';
             
         // FORMULA FIELDS  
-    case 'formula':
-    if (!property.formula) return '';
+case 'formula':
+    console.log('Formula property full object:', JSON.stringify(property, null, 2));
     
-    // Handle different formula result types
+    if (!property.formula) {
+        console.log('No formula property found');
+        return '';
+    }
+    
     const formulaResult = property.formula;
+    console.log('Formula result type:', formulaResult.type);
+    console.log('Formula result value:', formulaResult);
     
     if (formulaResult.type === 'string') {
+        console.log('String value:', formulaResult.string);
         return formulaResult.string || '';
     } else if (formulaResult.type === 'number') {
         return formulaResult.number !== null ? formulaResult.number.toLocaleString() : '';
