@@ -952,60 +952,61 @@ function applyDateFilter(filter, evt) {
             }
         }
 
-        function updateSummaryBoxes() {
-            const displayData = filteredData || currentData.results;
-            
-            const totalByCurrency = {};
-            const unpaidByCurrency = {};
-            
-            displayData.forEach(record => {
-                const currency = record.properties['Currency']?.select?.name || 'Unknown';
-                const grossAmount = record.properties['Gross']?.number || 0;
-                const amountReceived = record.properties['Amount Received']?.number || 0;
-                
-                if (!totalByCurrency[currency]) totalByCurrency[currency] = 0;
-                totalByCurrency[currency] += grossAmount;
-                
-                if (!amountReceived || amountReceived === 0) {
-                    if (!unpaidByCurrency[currency]) unpaidByCurrency[currency] = 0;
-                    unpaidByCurrency[currency] += grossAmount;
-                }
-            });
-            
-            const totalIncomeEl = document.getElementById('totalIncome');
-            const totalIncomeBreakdownEl = document.getElementById('totalIncomeBreakdown');
-            
-            let totalIncomeText = '';
-            let totalIncomeBreakdown = '';
-            
-            Object.entries(totalByCurrency).forEach(([currency, amount]) => {
-                if (totalIncomeText) totalIncomeText += ' | ';
-                totalIncomeText += `${currency} ${formatNumber(amount)}`;
-                
-                if (totalIncomeBreakdown) totalIncomeBreakdown += '\n';
-                totalIncomeBreakdown += `${currency}: ${formatNumber(amount)}`;
-            });
-            
-            totalIncomeEl.textContent = totalIncomeText || 'No data';
-            totalIncomeBreakdownEl.textContent = totalIncomeBreakdown;
-            
-            const unpaidIncomeEl = document.getElementById('unpaidIncome');
-            const unpaidIncomeBreakdownEl = document.getElementById('unpaidIncomeBreakdown');
-            
-            let unpaidIncomeText = '';
-            let unpaidIncomeBreakdown = '';
-            
-            Object.entries(unpaidByCurrency).forEach(([currency, amount]) => {
-                if (unpaidIncomeText) unpaidIncomeText += ' | ';
-                unpaidIncomeText += `${currency} ${formatNumber(amount)}`;
-                
-                if (unpaidIncomeBreakdown) unpaidIncomeBreakdown += '\n';
-                unpaidIncomeBreakdown += `${currency}: ${formatNumber(amount)}`;
-            });
-            
-            unpaidIncomeEl.textContent = unpaidIncomeText || 'All paid';
-            unpaidIncomeBreakdownEl.textContent = unpaidIncomeBreakdown;
-        }
+       // helpers (keep these once, above the function)
+function getNumberProp(record, keys) {
+  for (const k of keys) {
+    const p = record.properties?.[k];
+    if (p && p.type === 'number' && typeof p.number === 'number') return p.number;
+  }
+  return null; // important so we can tell missing vs 0
+}
+function getSelectNameProp(record, keys) {
+  for (const k of keys) {
+    const p = record.properties?.[k];
+    if (p && p.type === 'select' && p.select?.name) return p.select.name;
+  }
+  return 'Unknown';
+}
+
+// === Replace your updateSummaryBoxes with this ===
+function updateSummaryBoxes() {
+  if (!currentData || !currentData.results) return;
+
+  const rows = filteredData || currentData.results;
+
+  const totalByCurr = {};
+  const unpaidByCurr = {};
+
+  rows.forEach(rec => {
+    const net = getNumberProp(rec, ['Net Amount', 'Net']);
+    if (net === null) return; // skip if no net value
+
+    const received = getNumberProp(rec, ['Amount Received', 'Received Amount']);
+    const invCurr = getSelectNameProp(rec, ['Currency (Inv/Stmt)', 'Currency', 'Currency (Invoice)']);
+
+    // Total income by currency = sum of Net Amount
+    totalByCurr[invCurr] = (totalByCurr[invCurr] || 0) + net;
+
+    // Unpaid only if Amount Received === 0 or missing
+    if (received === null || received === 0) {
+      unpaidByCurr[invCurr] = (unpaidByCurr[invCurr] || 0) + net;
+    }
+  });
+
+  // ----- Render: Total Income
+  const totalEntries = Object.entries(totalByCurr);
+  document.getElementById('totalIncome').textContent =
+    totalEntries.length ? totalEntries.map(([c, a]) => `${c} ${formatNumber(a)}`).join(' | ') : 'No data';
+  document.getElementById('totalIncomeBreakdown').textContent =
+    totalEntries.map(([c, a]) => `${c}: ${formatNumber(a)}`).join('\n');
+
+  // ----- Render: Unpaid (full unpaid only)
+  const unpaidEntries = Object.entries(unpaidByCurr);
+  document.getElementById('unpaidIncome').textContent =
+    unpaidEntries.length ? unpaidEntries.map(([c, a]) => `${c} ${formatNumber(a)}`).join(' | ') : 'All paid';
+  document.getElementById('unpaidIncomeBreakdown').textContent =
+    unpaidEntries.map(([c, a]) => `${c}: ${formatNumber(a)}`).join('\n');
+}
 
         function formatNumber(num) {
             if (num === null || num === undefined || num === '') return '';
