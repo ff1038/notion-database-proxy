@@ -232,8 +232,8 @@ function getUniversalColumnConfig() {
       'Net Commissionable',
       'Commission %',
       'Mgmt Commission',
-      'Mgmt Inv #',
-      'VOID?' // Add the VOID field to columns
+      'Mgmt Inv #'
+      // Removed 'VOID?' for now to test
     ],
     columnHeaders: {
       'Invoice date': 'Date (Inv/Stmt)',
@@ -251,8 +251,7 @@ function getUniversalColumnConfig() {
       'Net Commissionable': 'Net Commissionable',
       'Commission %': 'Commission %',
       'Mgmt Commission': 'Mgmt Commission',
-      'Mgmt Inv #': 'Mgmt Inv #',
-      'VOID?': 'VOID'
+      'Mgmt Inv #': 'Mgmt Inv #'
     }
   };
 }
