@@ -212,17 +212,27 @@
         // Add this debug function to your dashboard (temporary)
 function debugRelationFields(data) {
     if (data.results && data.results.length > 0) {
-        const firstRecord = data.results[0];
-        console.log('=== VENDOR FIELD DEBUG ===');
+        console.log('=== CHECKING ALL RECORDS FOR VENDORS ===');
         
-        if (firstRecord.properties.Vendor) {
-            console.log('Vendor field data:', firstRecord.properties.Vendor);
-            console.log('Vendor type:', firstRecord.properties.Vendor.type);
-            console.log('Vendor relation:', firstRecord.properties.Vendor.relation);
-        } else {
-            console.log('No Vendor field found in record');
-            console.log('Available fields:', Object.keys(firstRecord.properties));
-        }
+        let recordsWithVendors = 0;
+        let recordsWithoutVendors = 0;
+        
+        data.results.forEach((record, index) => {
+            if (record.properties.Vendor) {
+                const vendorRelation = record.properties.Vendor.relation;
+                if (vendorRelation && vendorRelation.length > 0) {
+                    recordsWithVendors++;
+                    console.log(`Record ${index + 1}: Has ${vendorRelation.length} vendor(s)`);
+                } else {
+                    recordsWithoutVendors++;
+                    if (index < 5) { // Only log first 5 to avoid spam
+                        console.log(`Record ${index + 1}: No vendors linked`);
+                    }
+                }
+            }
+        });
+        
+        console.log(`Summary: ${recordsWithVendors} records with vendors, ${recordsWithoutVendors} without vendors`);
     }
 }
         
