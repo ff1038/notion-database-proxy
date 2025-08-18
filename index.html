@@ -776,32 +776,6 @@
             }
         }
 
-        function filterData() {
-            const searchTerm = document.getElementById('searchBox').value.toLowerCase().trim();
-            
-            if (!searchTerm) {
-                // If no search term, use the current date/unpaid filter
-                applyFilters();
-                return;
-            }
-            
-            // Start with date/unpaid filtered data
-            let baseData = getFilteredDataByDateAndUnpaid();
-            
-            // Apply search filter
-            filteredData = baseData.filter(record => {
-                const searchableText = Object.values(record.properties).map(property => {
-                    if (!property) return '';
-                    return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
-                }).join(' ');
-                
-                return searchableText.includes(searchTerm);
-            });
-            
-            currentPage = 1;
-            displayDataAsTable(currentData);
-        }
-        
         function applyDateFilter(filter) {
             // Update active filter button
             document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => {
@@ -859,6 +833,32 @@
             selectedIncomeType = document.getElementById('incomeTypeFilter').value;
             selectedCurrency = document.getElementById('currencyFilter').value;
             applyFilters();
+        }
+
+        function filterData() {
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase().trim();
+            
+            if (!searchTerm) {
+                // If no search term, use the current date/unpaid filter
+                applyFilters();
+                return;
+            }
+            
+            // Start with date/unpaid filtered data
+            let baseData = getFilteredDataByDateAndUnpaid();
+            
+            // Apply search filter
+            filteredData = baseData.filter(record => {
+                const searchableText = Object.values(record.properties).map(property => {
+                    if (!property) return '';
+                    return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
+                }).join(' ');
+                
+                return searchableText.includes(searchTerm);
+            });
+            
+            currentPage = 1;
+            displayDataAsTable(currentData);
         }
         
         function applyFilters() {
