@@ -74,6 +74,93 @@
             display: flex;
             align-items: center;
             gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        
+        .filter-btn {
+            padding: 6px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background: white;
+            color: #495057;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+        
+        .filter-btn:hover {
+            background: #f8f9fa;
+            border-color: #adb5bd;
+        }
+        
+        .filter-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .unpaid-filter {
+            background: #dc3545;
+            border-color: #dc3545;
+            color: white;
+        }
+        
+        .unpaid-filter:hover {
+            background: #c82333;
+        }
+        
+        .pagination-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 20px;
+            border-top: 1px solid #e9ecef;
+            background: #f8f9fa;
+        }
+        
+        .pagination-info {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .pagination-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .pagination-btn {
+            padding: 8px 12px;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            background: white;
+            color: #495057;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        
+        .pagination-btn:hover:not(:disabled) {
+            background: #f8f9fa;
+            border-color: #adb5bd;
+        }
+        
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pagination-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
         }
         
         .search-box {
@@ -285,9 +372,34 @@
             </div>
         </div>
         
+        <div style="padding: 15px 20px; background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
+            <div class="filter-buttons">
+                <button class="filter-btn active" onclick="applyDateFilter('all')">All Time</button>
+                <button class="filter-btn" onclick="applyDateFilter('30')">Last 30 Days</button>
+                <button class="filter-btn" onclick="applyDateFilter('90')">Last 90 Days</button>
+                <button class="filter-btn" onclick="applyDateFilter('180')">Last 6 Months</button>
+                <button class="filter-btn" onclick="applyDateFilter('365')">Last 12 Months</button>
+                <button class="filter-btn" onclick="applyDateFilter('2025')">2025</button>
+                <button class="filter-btn" onclick="applyDateFilter('2024')">2024</button>
+                <button class="filter-btn" onclick="applyDateFilter('2023')">2023</button>
+                <button class="filter-btn" onclick="applyDateFilter('2022')">2022</button>
+                <button class="filter-btn" onclick="applyDateFilter('2021')">2021</button>
+                <button class="filter-btn unpaid-filter" onclick="applyUnpaidFilter()">Unpaid Income</button>
+            </div>
+        </div>
+        
         <div id="tableContent">
             <div class="loading">
                 Loading your data...
+            </div>
+        </div>
+        
+        <div class="pagination-container" id="paginationContainer" style="display: none;">
+            <div class="pagination-info" id="paginationInfo"></div>
+            <div class="pagination-controls">
+                <button class="pagination-btn" id="prevBtn" onclick="changePage(-1)">← Previous</button>
+                <span id="pageNumbers"></span>
+                <button class="pagination-btn" id="nextBtn" onclick="changePage(1)">Next →</button>
             </div>
         </div>
     </div>
@@ -299,7 +411,12 @@
     <script>
         let currentUserEmail = '';
         let currentData = null;
+        let filteredData = null;
         let sortOrder = {};
+        let currentPage = 1;
+        let recordsPerPage = 50;
+        let currentDateFilter = 'all';
+        let isUnpaidFilter = false;
 
         // Auto-load on page load
         window.addEventListener('load', function() {
@@ -383,10 +500,21 @@
                     </div>
                 `;
                 recordCount.textContent = '0 records';
+                document.getElementById('paginationContainer').style.display = 'none';
                 return;
             }
 
-            updateRecordCount(data.results.length, data.results.length);
+            // Use filtered data if available, otherwise use all data
+            const displayData = filteredData || data.results;
+            
+            // Calculate pagination
+            const totalRecords = displayData.length;
+            const totalPages = Math.ceil(totalRecords / recordsPerPage);
+            const startIndex = (currentPage - 1) * recordsPerPage;
+            const endIndex = startIndex + recordsPerPage;
+            const pageData = displayData.slice(startIndex, endIndex);
+            
+            updateRecordCount(pageData.length, totalRecords, startIndex + 1, Math.min(endIndex, totalRecords));
             
             // Use column order and headers from API response
             const columnOrder = data.columnOrder || [];
@@ -423,11 +551,11 @@
             html += `</tr></thead><tbody id="tableBody">`;
             
             // Create rows
-            data.results.forEach((record, index) => {
+            pageData.forEach((record, index) => {
                 html += '<tr>';
                 properties.forEach(prop => {
                     const property = record.properties[prop];
-                    const value = property ? getPropertyValue(property) : '';
+                    const value = property ? getPropertyValue(property, prop) : '';
                     html += `<td>${value}</td>`;
                 });
                 html += '</tr>';
@@ -435,6 +563,9 @@
             
             html += '</tbody></table></div>';
             tableContent.innerHTML = html;
+            
+            // Update pagination
+            updatePagination(totalPages, totalRecords);
         }
 
         function sortTable(column) {
@@ -468,8 +599,9 @@
                 }
             });
             
-            // Sort the data
-            currentData.results.sort((a, b) => {
+            // Sort the filtered data if it exists, otherwise sort all data
+            const dataToSort = filteredData || currentData.results;
+            dataToSort.sort((a, b) => {
                 const aValue = getPropertySortValue(a.properties[column]);
                 const bValue = getPropertySortValue(b.properties[column]);
                 
@@ -479,14 +611,16 @@
                 return sortOrder[column] === 'asc' ? comparison : -comparison;
             });
             
-            // Re-render the table
-            displayDataAsTable(currentData);
-            
-            // Re-apply search filter if active
-            const searchBox = document.getElementById('searchBox');
-            if (searchBox && searchBox.value.trim()) {
-                filterData();
+            // Update the sorted data
+            if (filteredData) {
+                filteredData = dataToSort;
+            } else {
+                currentData.results = dataToSort;
             }
+            
+            // Reset to first page and re-render
+            currentPage = 1;
+            displayDataAsTable(currentData);
         }
 
         function getPropertySortValue(property) {
@@ -514,34 +648,214 @@
 
         function filterData() {
             const searchTerm = document.getElementById('searchBox').value.toLowerCase().trim();
-            const rows = document.querySelectorAll('#tableBody tr');
-            let visibleCount = 0;
             
-            rows.forEach(row => {
-                const text = row.textContent.toLowerCase();
-                if (!searchTerm || text.includes(searchTerm)) {
-                    row.classList.remove('hidden');
-                    visibleCount++;
-                } else {
-                    row.classList.add('hidden');
-                }
+            if (!searchTerm) {
+                // If no search term, use the current date/unpaid filter
+                applyFilters();
+                return;
+            }
+            
+            // Start with date/unpaid filtered data
+            let baseData = getFilteredDataByDateAndUnpaid();
+            
+            // Apply search filter
+            filteredData = baseData.filter(record => {
+                const searchableText = Object.values(record.properties).map(property => {
+                    if (!property) return '';
+                    return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
+                }).join(' ');
+                
+                return searchableText.includes(searchTerm);
             });
             
-            updateRecordCount(visibleCount, rows.length);
+            currentPage = 1;
+            displayDataAsTable(currentData);
+        }
+        
+        function applyDateFilter(filter) {
+            // Update active filter button
+            document.querySelectorAll('.filter-btn:not(.unpaid-filter)').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            currentDateFilter = filter;
+            isUnpaidFilter = false;
+            
+            // Update unpaid filter button
+            document.querySelector('.unpaid-filter').classList.remove('active');
+            
+            applyFilters();
+        }
+        
+        function applyUnpaidFilter() {
+            // Toggle unpaid filter
+            isUnpaidFilter = !isUnpaidFilter;
+            
+            const unpaidBtn = document.querySelector('.unpaid-filter');
+            if (isUnpaidFilter) {
+                unpaidBtn.classList.add('active');
+                // Clear date filter selection
+                document.querySelectorAll('.filter-btn:not(.unpaid-filter)').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                currentDateFilter = 'all';
+            } else {
+                unpaidBtn.classList.remove('active');
+                // Reset to "All Time"
+                currentDateFilter = 'all';
+                document.querySelector('.filter-btn').classList.add('active');
+            }
+            
+            applyFilters();
+        }
+        
+        function applyFilters() {
+            filteredData = getFilteredDataByDateAndUnpaid();
+            
+            // Apply search filter if there's a search term
+            const searchTerm = document.getElementById('searchBox').value.toLowerCase().trim();
+            if (searchTerm) {
+                filteredData = filteredData.filter(record => {
+                    const searchableText = Object.values(record.properties).map(property => {
+                        if (!property) return '';
+                        return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
+                    }).join(' ');
+                    
+                    return searchableText.includes(searchTerm);
+                });
+            }
+            
+            currentPage = 1;
+            displayDataAsTable(currentData);
+        }
+        
+        function getFilteredDataByDateAndUnpaid() {
+            if (!currentData || !currentData.results) return [];
+            
+            let filtered = [...currentData.results];
+            
+            // Apply date filter
+            if (currentDateFilter !== 'all') {
+                filtered = filtered.filter(record => {
+                    const dateProperty = record.properties['Invoice date'];
+                    if (!dateProperty || !dateProperty.date) return false;
+                    
+                    const recordDate = new Date(dateProperty.date.start);
+                    const now = new Date();
+                    
+                    if (currentDateFilter === '30') {
+                        const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+                        return recordDate >= thirtyDaysAgo;
+                    } else if (currentDateFilter === '90') {
+                        const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
+                        return recordDate >= ninetyDaysAgo;
+                    } else if (currentDateFilter === '180') {
+                        const sixMonthsAgo = new Date(now.getTime() - (180 * 24 * 60 * 60 * 1000));
+                        return recordDate >= sixMonthsAgo;
+                    } else if (currentDateFilter === '365') {
+                        const oneYearAgo = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000));
+                        return recordDate >= oneYearAgo;
+                    } else {
+                        // Year filter (2025, 2024, etc.)
+                        return recordDate.getFullYear().toString() === currentDateFilter;
+                    }
+                });
+            }
+            
+            // Apply unpaid filter
+            if (isUnpaidFilter) {
+                filtered = filtered.filter(record => {
+                    const amountReceived = record.properties['Amount Received'];
+                    return !amountReceived || 
+                           !amountReceived.number || 
+                           amountReceived.number === 0 || 
+                           amountReceived.number === null;
+                });
+            }
+            
+            return filtered;
+        }
+        
+        function updatePagination(totalPages, totalRecords) {
+            const paginationContainer = document.getElementById('paginationContainer');
+            const paginationInfo = document.getElementById('paginationInfo');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const pageNumbers = document.getElementById('pageNumbers');
+            
+            if (totalPages <= 1) {
+                paginationContainer.style.display = 'none';
+                return;
+            }
+            
+            paginationContainer.style.display = 'flex';
+            
+            // Update info
+            const startRecord = (currentPage - 1) * recordsPerPage + 1;
+            const endRecord = Math.min(currentPage * recordsPerPage, totalRecords);
+            paginationInfo.textContent = `Showing ${startRecord}-${endRecord} of ${totalRecords} records`;
+            
+            // Update buttons
+            prevBtn.disabled = currentPage === 1;
+            nextBtn.disabled = currentPage === totalPages;
+            
+            // Update page numbers
+            let pageNumbersHtml = '';
+            const showPages = 5; // Show 5 page numbers
+            let startPage = Math.max(1, currentPage - Math.floor(showPages / 2));
+            let endPage = Math.min(totalPages, startPage + showPages - 1);
+            
+            // Adjust start page if we're near the end
+            if (endPage - startPage < showPages - 1) {
+                startPage = Math.max(1, endPage - showPages + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const activeClass = i === currentPage ? 'active' : '';
+                pageNumbersHtml += `<button class="pagination-btn ${activeClass}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            
+            pageNumbers.innerHTML = pageNumbersHtml;
+        }
+        
+        function changePage(direction) {
+            const totalPages = Math.ceil((filteredData || currentData.results).length / recordsPerPage);
+            const newPage = currentPage + direction;
+            
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                displayDataAsTable(currentData);
+            }
+        }
+        
+        function goToPage(page) {
+            currentPage = page;
+            displayDataAsTable(currentData);
         }
 
-        function updateRecordCount(visible, total) {
+        function updateRecordCount(displayed, total, start, end) {
             const recordCount = document.getElementById('recordCount');
-            if (visible === total) {
+            if (start && end) {
+                recordCount.textContent = `${start}-${end} of ${total} records`;
+            } else if (displayed === total) {
                 recordCount.textContent = `${total} record${total !== 1 ? 's' : ''}`;
             } else {
-                recordCount.textContent = `${visible} of ${total} record${total !== 1 ? 's' : ''}`;
+                recordCount.textContent = `${displayed} of ${total} record${total !== 1 ? 's' : ''}`;
             }
         }
 
         function formatNumber(num) {
-            if (num === null || num === undefined) return '';
-            return Number(num).toFixed(2);
+            if (num === null || num === undefined || num === '') return '';
+            return Number(num).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+        
+        function formatPercentage(num) {
+            if (num === null || num === undefined || num === '') return '';
+            return (Number(num) * 100).toFixed(2) + '%';
         }
 
         function formatDate(dateString) {
@@ -598,8 +912,13 @@
             return colors[Math.abs(hash) % colors.length];
         }
 
-        function getPropertyValue(property) {
+        function getPropertyValue(property, columnName) {
             if (!property) return '';
+            
+            // Special handling for Commission % column
+            if (columnName === 'Commission %' && property.type === 'number') {
+                return formatPercentage(property.number);
+            }
             
             switch (property.type) {
                 case 'title':
@@ -666,6 +985,10 @@
                     if (formulaResult.type === 'string') {
                         return formulaResult.string || '';
                     } else if (formulaResult.type === 'number') {
+                        // Special handling for Commission % in formula fields
+                        if (columnName === 'Commission %') {
+                            return formatPercentage(formulaResult.number);
+                        }
                         return formulaResult.number !== null ? formatNumber(formulaResult.number) : '';
                     } else if (formulaResult.type === 'boolean') {
                         return formulaResult.boolean ? '✅' : '❌';
@@ -680,6 +1003,10 @@
                     
                     switch (property.rollup.type) {
                         case 'number':
+                            // Special handling for Commission % in rollup fields
+                            if (columnName === 'Commission %') {
+                                return formatPercentage(property.rollup.number);
+                            }
                             return property.rollup.number ? formatNumber(property.rollup.number) : '';
                         case 'date':
                             return property.rollup.date ? formatDate(property.rollup.date.start) : '';
@@ -687,6 +1014,9 @@
                             if (property.rollup.array && property.rollup.array.length > 0) {
                                 return property.rollup.array.map(item => {
                                     if (item.type === 'number') {
+                                        if (columnName === 'Commission %') {
+                                            return formatPercentage(item.number);
+                                        }
                                         return item.number ? formatNumber(item.number) : '';
                                     } else if (item.type === 'rich_text') {
                                         return item.rich_text.map(t => t.plain_text).join('');
