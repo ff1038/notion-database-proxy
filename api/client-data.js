@@ -167,12 +167,12 @@ function getUniversalColumnConfig() {
       'Mgmt Inv #'
     ],
     columnHeaders: {
-      'Name': 'Date (Inv/Stmt)',
-      'Date Created': 'Invoice #',
-      'Vendor',
-      'Description',
-      'Income Type',
-      'Net Amount',
+      'Invoice date': 'Date (Inv/Stmt)',
+      'Inv #': 'Invoice #',
+      'Vendor:' 'Vendor',
+      'Description:' 'Description',
+      'Income Type:' 'Income Type',
+      'Net:' 'Net Amount',
       'Assigned To': 'Gross Amount',
       'Assigned To': 'Currency (Inv/Stmt)',
       'Assigned To': 'Paid In Date',
