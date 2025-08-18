@@ -227,43 +227,50 @@
             loadData();
         });
 
-        async function loadData() {
-            const tableContent = document.getElementById('tableContent');
-            tableContent.innerHTML = '<div class="loading">Loading your data...</div>';
+// Update the loadData function in index.html
+async function loadData() {
+    const tableContent = document.getElementById('tableContent');
+    tableContent.innerHTML = '<div class="loading">Authenticating and loading your data...</div>';
 
-            try {
-                console.log("Fetching data from API...");
-                
-                // Use relative path since we're on the same domain
-                const response = await fetch(`/api/client-data?userEmail=${encodeURIComponent(currentUserEmail)}`, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                console.log("Response status:", response.status);
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `HTTP ${response.status}`);
-                }
-
-                const data = await response.json();
-                console.log("Data received:", data);
-                
-                if (data.authorizedClient) {
-                    document.getElementById('clientDisplay').textContent = `${data.authorizedClient} Dashboard`;
-                }
-                
-                displayDataAsTable(data);
-                
-            } catch (error) {
-                console.error('Error loading data:', error);
-                showError(`Error loading data: ${error.message}`);
-            }
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const userEmail = urlParams.get('userEmail');
+        const authToken = urlParams.get('authToken');
+        const timestamp = urlParams.get('timestamp');
+        
+        if (!userEmail || !authToken || !timestamp) {
+            throw new Error('Missing authentication parameters');
         }
+        
+        console.log("Authenticating user:", userEmail);
+        
+        const response = await fetch(`/api/client-data?userEmail=${encodeURIComponent(userEmail)}&authToken=${authToken}&timestamp=${timestamp}`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Authentication failed: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Authenticated data received:", data);
+        
+        if (data.authorizedClient) {
+            document.getElementById('clientDisplay').textContent = `${data.authorizedClient} Dashboard`;
+        }
+        
+        displayDataAsTable(data);
+        
+    } catch (error) {
+        console.error('Authentication error:', error);
+        showError(`Authentication failed: ${error.message}<br><br>Please log in to your account and try again.`);
+    }
+}
 
         function displayDataAsTable(data) {
             const tableContent = document.getElementById('tableContent');
