@@ -35,7 +35,7 @@ export default async function handler(req, res) {
   
   try {
     const requestBody = {
-      page_size: 100,
+      page_size: 20,
       filter: {
         property: "Client",
         select: {
