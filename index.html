@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Client Dashboard</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        
+        .dashboard-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .client-name {
+            font-size: 28px;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .dashboard-subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            margin: 10px 0 0 0;
+        }
+        
+        .security-indicator {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .table-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .table-header {
+            background: #f8f9fa;
+            padding: 20px;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 0;
+            color: #333;
+        }
+        
+        .record-count {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .table-wrapper {
+            overflow-x: auto;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        
+        .data-table th {
+            background: #f8f9fa;
+            padding: 15px 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #495057;
+            border-bottom: 2px solid #dee2e6;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+            vertical-align: top;
+        }
+        
+        .data-table tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .tag {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            display: inline-block;
+            margin: 2px;
+        }
+        
+        .status {
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            text-align: center;
+        }
+        
+        .status.not-started { background: #f8f9fa; color: #6c757d; }
+        .status.in-progress { background: #fff3cd; color: #856404; }
+        .status.completed { background: #d4edda; color: #155724; }
+        .status.on-hold { background: #f8d7da; color: #721c24; }
+        
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+            font-size: 16px;
+        }
+        
+        .error {
+            text-align: center;
+            padding: 40px;
+            color: #721c24;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 8px;
+            margin: 20px;
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 60px;
+            color: #6c757d;
+        }
+        
+        .refresh-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+        
+        .refresh-btn:hover {
+            background: #5a6fd8;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-header">
+        <h1 class="client-name" id="clientDisplay">Client Dashboard</h1>
+        <p class="dashboard-subtitle">Secure data view</p>
+    </div>
+
+    <div class="security-indicator">
+        <span>🔒</span>
+        <div>
+            <strong>Secure Access:</strong> You can only view data assigned to your account.
+            <div style="font-size: 14px; opacity: 0.8;">User: <span id="userEmail">Loading...</span></div>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div class="table-header">
+            <h2 class="table-title">Your Data</h2>
+            <span id="recordCount" class="record-count"></span>
+        </div>
+        
+        <div id="tableContent">
+            <div class="loading">
+                Loading your data...
+            </div>
+        </div>
+    </div>
+    
+    <button class="refresh-btn" onclick="loadData()" title="Refresh Data">
+        ↻
+    </button>
+
+    <script>
+        let currentUserEmail = '';
+
+        // Auto-load on page load
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const userEmail = urlParams.get('userEmail');
+            
+            if (!userEmail) {
+                showError('No user specified. Please access through proper link.');
+                return;
+            }
+            
+            currentUserEmail = userEmail;
+            document.getElementById('userEmail').textContent = userEmail;
+            
+            console.log("Loading data for user:", userEmail);
+            loadData();
+        });
+
+        async function loadData() {
+            const tableContent = document.getElementById('tableContent');
+            tableContent.innerHTML = '<div class="loading">Loading your data...</div>';
+
+            try {
+                console.log("Fetching data from API...");
+                
+                // Use relative path since we're on the same domain
+                const response = await fetch(`/api/client-data?userEmail=${encodeURIComponent(currentUserEmail)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                console.log("Response status:", response.status);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                console.log("Data received:", data);
+                
+                if (data.authorizedClient) {
+                    document.getElementById('clientDisplay').textContent = `${data.authorizedClient} Dashboard`;
+                }
+                
+                displayDataAsTable(data);
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+                showError(`Error loading data: ${error.message}`);
+            }
+        }
+
+        function displayDataAsTable(data) {
+            const tableContent = document.getElementById('tableContent');
+            const recordCount = document.getElementById('recordCount');
+            
+            if (!data.results || data.results.length === 0) {
+                tableContent.innerHTML = `
+                    <div class="no-data">
+                        <h3>No data found for your account</h3>
+                        <p>Contact your administrator if you believe this is an error.</p>
+                    </div>
+                `;
+                recordCount.textContent = '0 records';
+                return;
+            }
+
+            recordCount.textContent = `${data.results.length} record${data.results.length !== 1 ? 's' : ''}`;
+
+            // Get all properties except Client
+            const properties = new Set();
+            data.results.forEach(record => {
+                Object.keys(record.properties).forEach(prop => {
+                    if (prop !== 'Client') properties.add(prop);
+                });
+            });
+
+            let html = `
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+            `;
+
+            // Create headers
+            Array.from(properties).forEach(prop => {
+                html += `<th>${prop}</th>`;
+            });
+            html += `</tr></thead><tbody>`;
+
+            // Create rows
+            data.results.forEach(record => {
+                html += '<tr>';
+                Array.from(properties).forEach(prop => {
+                    const property = record.properties[prop];
+                    const value = property ? getPropertyValue(property) : '';
+                    html += `<td>${value}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            tableContent.innerHTML = html;
+        }
+
+        function getPropertyValue(property) {
+            switch (property.type) {
+                case 'title':
+                    return property.title.map(t => t.plain_text).join('');
+                case 'rich_text':
+                    return property.rich_text.map(t => t.plain_text).join('');
+                case 'number':
+                    return property.number || '';
+                case 'select':
+                    return property.select ? `<span class="tag">${property.select.name}</span>` : '';
+                case 'multi_select':
+                    return property.multi_select.map(tag => `<span class="tag">${tag.name}</span>`).join(' ');
+                case 'date':
+                    return property.date ? new Date(property.date.start).toLocaleDateString() : '';
+                case 'checkbox':
+                    return property.checkbox ? '✅' : '❌';
+                case 'url':
+                    return property.url ? `<a href="${property.url}" target="_blank" style="color: #667eea;">Link</a>` : '';
+                case 'email':
+                    return property.email ? `<a href="mailto:${property.email}" style="color: #667eea;">${property.email}</a>` : '';
+                case 'phone_number':
+                    return property.phone_number || '';
+                case 'status':
+                    if (property.status) {
+                        const status = property.status.name.toLowerCase().replace(/\s+/g, '-');
+                        return `<span class="status ${status}">${property.status.name}</span>`;
+                    }
+                    return '';
+                case 'people':
+                    return property.people.map(person => person.name).join(', ');
+                default:
+                    return '';
+            }
+        }
+
+        function showError(message) {
+            const tableContent = document.getElementById('tableContent');
+            tableContent.innerHTML = `<div class="error">${message}</div>`;
+        }
+    </script>
+</body>
+</html>
