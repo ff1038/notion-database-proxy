@@ -53,9 +53,8 @@ module.exports = async function handler(req, res) {
 
     console.log('5. Making Notion API request (single page, 15 rows while testing)...');
 
-    // --- Fetch up to 15 rows for this client (testing mode) ---
     const requestBody = {
-      page_size: 15,
+      page_size: 15, // testing limit
       filter: {
         property: 'Client',
         select: { equals: clientName }
@@ -85,7 +84,7 @@ module.exports = async function handler(req, res) {
 
     console.log('6. Total records retrieved:', allResults.length);
 
-    // --- OPTIONAL: resolve first title for relation props (kept from your code) ---
+    // Optional: resolve titles for relation properties (first related page only)
     console.log('7. Processing relation fields...');
     if (allResults.length > 0) {
       let count = 0;
@@ -152,4 +151,80 @@ module.exports = async function handler(req, res) {
       timestamp: new Date().toISOString()
     });
   }
-}; // <- IMPORTANT: closes module.exports function
+};
+
+/* ----------------- Helpers (NO exports here) ----------------- */
+
+function getUniversalColumnConfig() {
+  return {
+    columns: [
+      'Invoice date',
+      'Inv #',
+      'Vendor1',
+      'Description',
+      'Income Type',
+      'Net',
+      'Gross',
+      'Currency',
+      'Paid in date',
+      'Amount Received',
+      'Currency (receipt)',
+      'Adjustments',
+      'Net Commissionable',
+      'Commission %',
+      'Mgmt Commission',
+      'Mgmt Inv #'
+    ],
+    columnHeaders: {
+      'Invoice date': 'Date (Inv/Stmt)',
+      'Inv #': 'Invoice #',
+      'Vendor1': 'Vendor',
+      'Description': 'Description',
+      'Income Type': 'Income Type',
+      'Net': 'Net Amount',
+      'Gross': 'Gross Amount',
+      'Currency': 'Currency (Inv/Stmt)',
+      'Paid in date': 'Paid In Date',
+      'Amount Received': 'Amount Received',
+      'Currency (receipt)': 'Currency (Received)',
+      'Adjustments': 'Adjustments',
+      'Net Commissionable': 'Net Commissionable',
+      'Commission %': 'Commission %',
+      'Mgmt Commission': 'Mgmt Commission',
+      'Mgmt Inv #': 'Mgmt Inv #'
+    }
+  };
+}
+
+function getClientForUser(userEmail) {
+  const userClientMap = {
+    'nick@sayshey.com': 'King Ed',
+    'client.a@company.com': 'Client A',
+    'client.b@business.com': 'Client B'
+  };
+  return userClientMap[(userEmail || '').toLowerCase()] || null;
+}
+
+function verifySecureKey(userEmail, secureKey, timestamp) {
+  try {
+    const userSecureKeys = {
+      'nick@sayshey.com': 'ke-' + Buffer.from('king-ed-2025').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'client.a@company.com': 'ca-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'client.b@business.com': 'cb-' + Buffer.from('client-b-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, '')
+    };
+
+    const expectedKey = userSecureKeys[(userEmail || '').toLowerCase()];
+    if (!expectedKey || secureKey !== expectedKey) return false;
+
+    const now = Math.floor(Date.now() / 1000);
+    const requestTime = parseInt(timestamp, 10);
+    const timeDiff = now - requestTime;
+    // allow up to 1 hour drift, and not more than 5 min in the future
+    if (Number.isNaN(requestTime) || timeDiff > 3600 || timeDiff < -300) return false;
+
+    return true;
+  } catch (err) {
+    console.error('Secure key verification error:', err);
+    return false;
+  }
+}
