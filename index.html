@@ -468,8 +468,17 @@
                 });
                 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || `Access denied: ${response.status}`);
+                    let errorMessage = `Access denied: ${response.status}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.error || errorMessage;
+                        if (errorData.details) {
+                            console.error('Server error details:', errorData.details);
+                        }
+                    } catch (parseError) {
+                        console.error('Could not parse error response:', parseError);
+                    }
+                    throw new Error(errorMessage);
                 }
 
                 const data = await response.json();
