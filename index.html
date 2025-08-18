@@ -208,6 +208,24 @@
     </button>
 
     <script>
+
+        // Add this debug function to your dashboard (temporary)
+function debugRelationFields(data) {
+    if (data.results && data.results.length > 0) {
+        const firstRecord = data.results[0];
+        console.log('=== VENDOR FIELD DEBUG ===');
+        
+        if (firstRecord.properties.Vendor) {
+            console.log('Vendor field data:', firstRecord.properties.Vendor);
+            console.log('Vendor type:', firstRecord.properties.Vendor.type);
+            console.log('Vendor relation:', firstRecord.properties.Vendor.relation);
+        } else {
+            console.log('No Vendor field found in record');
+            console.log('Available fields:', Object.keys(firstRecord.properties));
+        }
+    }
+}
+        
         let currentUserEmail = '';
 
         // Auto-load on page load
@@ -258,6 +276,7 @@ async function loadData() {
         }
 
         const data = await response.json();
+        debugRelationFields(data); // Add this line
         console.log("Secure access granted, data received:", data);
         
         if (data.authorizedClient) {
