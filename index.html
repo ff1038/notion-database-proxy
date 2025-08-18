@@ -394,6 +394,21 @@
             color: #6c757d;
         }
         
+        .export-btn {
+              background-color: #4CAF50;
+              color: white;
+              border: none;
+              padding: 8px 14px;
+              margin-left: 10px;
+              border-radius: 6px;
+              cursor: pointer;
+              font-size: 14px;
+        }
+
+        .export-btn:hover {
+              background-color: #45a049;
+        }
+        
         .refresh-btn {
             position: fixed;
             bottom: 30px;
@@ -429,20 +444,6 @@
             .search-box {
                 width: 200px;
             }
-            .export-btn {
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  padding: 8px 14px;
-  margin-left: 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.export-btn:hover {
-  background-color: #45a049;
-}
         }
     </style>
 </head>
@@ -503,12 +504,11 @@
 
   <div class="controls-right">
     <input type="text" id="searchBox" class="search-box" placeholder="Search data..." />
-    <span id="recordCount" class="record-count"></span>
-  </div>
-    <div class="table-actions">
-  <input type="text" id="searchInput" placeholder="Search data..." />
+                <div class="table-actions">
   <button class="export-btn" onclick="exportToCSV()">⬇ Export CSV</button>
 </div>
+    <span id="recordCount" class="record-count"></span>
+  </div>
 </div>      
 
         
@@ -1233,7 +1233,7 @@ function updateSummaryBoxes() {
         window.loadData = loadData;
 
         function exportToCSV() {
-  const table = document.getElementById("dataTable");
+  const table = document.getElementById("data-table");
   if (!table) return;
 
   let csv = [];
