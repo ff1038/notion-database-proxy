@@ -12,14 +12,24 @@
             background-color: #f8f9fa;
         }
         
-        .dashboard-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 12px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
+        .dashboard-header.merged {
+display:flex; align-items:center; justify-content:space-between;
+  background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+  color:#fff; padding:18px 22px; border-radius:12px; margin-bottom:16px;
+}
+.header-left .client-name{ margin:0; font-size:22px; font-weight:600; }
+.header-left .dashboard-subtitle{ margin:4px 0 0; font-size:13px; opacity:.9; }
+.secure-chip{
+  display:flex; align-items:center; gap:10px;
+  background: rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.25);
+  padding:8px 12px; border-radius:10px; font-size:13px; white-space:nowrap;
+}
+.secure-chip .divider{ opacity:.6 }
+@media (max-width:768px){
+  .dashboard-header.merged{flex-direction:column; align-items:flex-start; gap:10px;}
+  .secure-chip{width:100%; justify-content:space-between; flex-wrap:wrap;}
+}
         
         .client-name {
             font-size: 28px;
@@ -87,16 +97,20 @@
             overflow: hidden;
         }
         
-        .table-header {
-            background: #f8f9fa;
-            padding: 20px;
-            border-bottom: 1px solid #e9ecef;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-        }
+        .table-header.compact {
+       background:#f8f9fa; padding:12px 16px; border-bottom:1px solid #e9ecef;
+    display:flex; gap:12px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;
+}
+.controls-left{ display:flex; flex:1 1 auto; min-width:320px; }
+.controls-right{ display:flex; align-items:center; gap:10px; }
+.filter-buttons.condensed{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.filter-btn{ padding:4px 10px; font-size:12px; }
+.dropdown-filter{ padding:5px 10px; font-size:12px; min-width:120px; }
+.search-box{ width:260px; }
+@media (max-width:900px){
+  .controls-right{ width:100%; justify-content:space-between; }
+  .search-box{ flex:1; min-width:180px; }
+}
         
         .table-title {
             font-size: 20px;
@@ -413,18 +427,17 @@
     </style>
 </head>
 <body>
-    <div class="dashboard-header">
-        <h1 class="client-name" id="clientDisplay">Client Dashboard</h1>
-        <p class="dashboard-subtitle">Secure data view</p>
-    </div>
-
-    <div class="security-indicator">
-        <span>🔒</span>
-        <div>
-            <strong>Secure Access:</strong> You can only view data assigned to your account.
-            <div style="font-size: 14px; opacity: 0.8;">User: <span id="userEmail">Loading...</span></div>
-        </div>
-    </div>
+<div class="dashboard-header merged">
+  <div class="header-left">
+    <h1 class="client-name" id="clientDisplay">Client Dashboard</h1>
+    <p class="dashboard-subtitle">Secure data view</p>
+  </div>
+  <div class="header-right secure-chip">
+    <span>🔒 Secure access</span>
+    <span class="divider">•</span>
+    <span>User: <span id="userEmail">Loading...</span></span>
+  </div>
+</div>
 
     <div class="summary-container" id="summaryContainer" style="display: none;">
         <div class="summary-box">
@@ -440,38 +453,38 @@
     </div>
 
     <div class="table-container">
-        <div class="table-header">
-            <h2 class="table-title">Your Data</h2>
-            <div class="search-container">
-                <input type="text" id="searchBox" class="search-box" placeholder="Search data..." />
-                <span id="recordCount" class="record-count"></span>
-            </div>
-        </div>
-        
-        <div style="padding: 15px 20px; background: #f8f9fa; border-bottom: 1px solid #e9ecef;">
-            <div class="filter-buttons">
-                <button class="filter-btn active" onclick="applyDateFilter('all', event)">All Time</button>
-                <button class="filter-btn" onclick="applyDateFilter('30'), event">Last 30 Days</button>
-                <button class="filter-btn" onclick="applyDateFilter('90'), event">Last 90 Days</button>
-                <button class="filter-btn" onclick="applyDateFilter('180'), event">Last 6 Months</button>
-                <button class="filter-btn" onclick="applyDateFilter('365'), event">Last 12 Months</button>
-                <button class="filter-btn" onclick="applyDateFilter('2025'), event">2025</button>
-                <button class="filter-btn" onclick="applyDateFilter('2024'), event">2024</button>
-                <button class="filter-btn" onclick="applyDateFilter('2023'), event">2023</button>
-                <button class="filter-btn" onclick="applyDateFilter('2022'), event">2022</button>
-                <button class="filter-btn" onclick="applyDateFilter('2021'), event">2021</button>
-                <button class="filter-btn unpaid-filter" onclick="applyUnpaidFilter()">Unpaid Income</button>
-                <button class="filter-btn void-filter" onclick="toggleVoidFilter()">Show Voided</button>
-            </div>
-            <div class="filter-buttons" style="margin-top: 10px;">
-                <select class="dropdown-filter" id="incomeTypeFilter" onchange="applyDropdownFilters()">
-                    <option value="">All Income Types</option>
-                </select>
-                <select class="dropdown-filter" id="currencyFilter" onchange="applyDropdownFilters()">
-                    <option value="">All Currencies</option>
-                </select>
-            </div>
-        </div>
+<div class="table-header compact">
+  <div class="controls-left">
+    <div class="filter-buttons condensed">
+      <button class="filter-btn active" onclick="applyDateFilter('all', event)">All Time</button>
+      <button class="filter-btn" onclick="applyDateFilter('30', event)">Last 30 Days</button>
+      <button class="filter-btn" onclick="applyDateFilter('90', event)">Last 90 Days</button>
+      <button class="filter-btn" onclick="applyDateFilter('180', event)">Last 6 Months</button>
+      <button class="filter-btn" onclick="applyDateFilter('365', event)">Last 12 Months</button>
+      <button class="filter-btn" onclick="applyDateFilter('2025', event)">2025</button>
+      <button class="filter-btn" onclick="applyDateFilter('2024', event)">2024</button>
+      <button class="filter-btn" onclick="applyDateFilter('2023', event)">2023</button>
+      <button class="filter-btn" onclick="applyDateFilter('2022', event)">2022</button>
+      <button class="filter-btn" onclick="applyDateFilter('2021', event)">2021</button>
+
+      <button class="filter-btn unpaid-filter" onclick="applyUnpaidFilter()">Unpaid Income</button>
+      <button class="filter-btn void-filter" onclick="toggleVoidFilter()">Show Voided</button>
+
+      <select class="dropdown-filter" id="incomeTypeFilter" onchange="applyDropdownFilters()">
+        <option value="">All Income Types</option>
+      </select>
+      <select class="dropdown-filter" id="currencyFilter" onchange="applyDropdownFilters()">
+        <option value="">All Currencies</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="controls-right">
+    <input type="text" id="searchBox" class="search-box" placeholder="Search data..." />
+    <span id="recordCount" class="record-count"></span>
+  </div>
+</div>      
+
         
         <div id="tableContent">
             <div class="loading">Loading your data...</div>
@@ -503,17 +516,13 @@
         let selectedCurrency = '';
 
 function applyDateFilter(filter, evt) {
-    document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    if (evt && evt.target) {
-        evt.target.classList.add('active');
-    }
-    currentDateFilter = filter;
-    isUnpaidFilter = false;
-    const unpaidBtn = document.querySelector('.unpaid-filter');
-    if (unpaidBtn) unpaidBtn.classList.remove('active');
-    applyFilters();
+  document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => btn.classList.remove('active'));
+  if (evt && evt.target) evt.target.classList.add('active');
+  currentDateFilter = filter;
+  isUnpaidFilter = false;
+  const unpaidBtn = document.querySelector('.unpaid-filter');
+  if (unpaidBtn) unpaidBtn.classList.remove('active');
+  applyFilters();
 }
         
         function applyUnpaidFilter() {
