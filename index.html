@@ -324,7 +324,6 @@
             margin: 2px;
         }
         
-        /* Default colors */
         .tag.default { background: #e9ecef; color: #495057; }
         .tag.gray { background: #e9ecef; color: #495057; }
         .tag.brown { background: #d7ccc8; color: #5d4037; }
@@ -335,8 +334,6 @@
         .tag.purple { background: #d1c4e9; color: #512da8; }
         .tag.pink { background: #f8bbd9; color: #c2185b; }
         .tag.red { background: #ffcdd2; color: #d32f2f; }
-        
-        /* Income Type specific colors */
         .tag.royalties { background: #e3f2fd; color: #1976d2; }
         .tag.publishing { background: #e8f5e8; color: #2e7d32; }
         .tag.master { background: #fff3e0; color: #f57c00; }
@@ -429,7 +426,6 @@
         </div>
     </div>
 
-    <!-- Summary Boxes -->
     <div class="summary-container" id="summaryContainer" style="display: none;">
         <div class="summary-box">
             <div class="summary-title">Total Income by Currency</div>
@@ -478,9 +474,7 @@
         </div>
         
         <div id="tableContent">
-            <div class="loading">
-                Loading your data...
-            </div>
+            <div class="loading">Loading your data...</div>
         </div>
         
         <div class="pagination-container" id="paginationContainer" style="display: none;">
@@ -493,9 +487,7 @@
         </div>
     </div>
     
-    <button class="refresh-btn" onclick="loadData()" title="Refresh Data">
-        ↻
-    </button>
+    <button class="refresh-btn" onclick="loadData()" title="Refresh Data">↻</button>
 
     <script>
         let currentUserEmail = '';
@@ -510,50 +502,38 @@
         let selectedIncomeType = '';
         let selectedCurrency = '';
 
-        // Define all filter functions first
         function applyDateFilter(filter) {
-            // Update active filter button
             document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => {
                 btn.classList.remove('active');
             });
             event.target.classList.add('active');
-            
             currentDateFilter = filter;
             isUnpaidFilter = false;
-            
-            // Update unpaid filter button
             const unpaidBtn = document.querySelector('.unpaid-filter');
             if (unpaidBtn) unpaidBtn.classList.remove('active');
-            
             applyFilters();
         }
         
         function applyUnpaidFilter() {
-            // Toggle unpaid filter
             isUnpaidFilter = !isUnpaidFilter;
-            
             const unpaidBtn = document.querySelector('.unpaid-filter');
             if (isUnpaidFilter) {
                 unpaidBtn.classList.add('active');
-                // Clear date filter selection
                 document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => {
                     btn.classList.remove('active');
                 });
                 currentDateFilter = 'all';
             } else {
                 unpaidBtn.classList.remove('active');
-                // Reset to "All Time"
                 currentDateFilter = 'all';
                 const allTimeBtn = document.querySelector('.filter-btn');
                 if (allTimeBtn) allTimeBtn.classList.add('active');
             }
-            
             applyFilters();
         }
 
         function toggleVoidFilter() {
             showVoidedItems = !showVoidedItems;
-            
             const voidBtn = document.querySelector('.void-filter');
             if (showVoidedItems) {
                 voidBtn.classList.add('active');
@@ -562,14 +542,12 @@
                 voidBtn.classList.remove('active');
                 voidBtn.textContent = 'Show Voided';
             }
-            
             applyFilters();
         }
 
         function applyDropdownFilters() {
             const incomeTypeFilter = document.getElementById('incomeTypeFilter');
             const currencyFilter = document.getElementById('currencyFilter');
-            
             selectedIncomeType = incomeTypeFilter ? incomeTypeFilter.value : '';
             selectedCurrency = currencyFilter ? currencyFilter.value : '';
             applyFilters();
@@ -577,10 +555,7 @@
 
         function applyFilters() {
             if (!currentData) return;
-            
             filteredData = getFilteredDataByDateAndUnpaid();
-            
-            // Apply search filter if there's a search term
             const searchBox = document.getElementById('searchBox');
             const searchTerm = searchBox ? searchBox.value.toLowerCase().trim() : '';
             if (searchTerm) {
@@ -589,11 +564,9 @@
                         if (!property) return '';
                         return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
                     }).join(' ');
-                    
                     return searchableText.includes(searchTerm);
                 });
             }
-            
             currentPage = 1;
             displayDataAsTable(currentData);
         }
@@ -602,44 +575,31 @@
             applyFilters();
         }
 
-        // Make sure loadData is globally available for the refresh button
-        window.loadData = loadData;
-
-        // Auto-load on page load
         window.addEventListener('load', function() {
             console.log('Window loaded, starting initialization...');
-            
             const urlParams = new URLSearchParams(window.location.search);
             const userEmail = urlParams.get('userEmail');
-            
-            console.log('Checking URL parameters...');
             console.log('userEmail from URL:', userEmail);
-            
             if (!userEmail) {
                 console.error('No userEmail parameter found in URL');
                 showError('No user specified. Please access through proper link.');
                 return;
             }
-            
             currentUserEmail = userEmail;
             const userEmailElement = document.getElementById('userEmail');
             if (userEmailElement) {
                 userEmailElement.textContent = userEmail;
             }
-            
             console.log("Starting loadData for user:", userEmail);
             loadData();
         });
 
-        // Search functionality
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, setting up search...');
             const searchBox = document.getElementById('searchBox');
             if (searchBox) {
                 searchBox.addEventListener('input', filterData);
                 console.log('Search box event listener added');
-            } else {
-                console.log('Search box not found during DOMContentLoaded');
             }
         });
 
@@ -673,7 +633,6 @@
                 });
                 
                 console.log("API Response status:", response.status);
-                console.log("API Response headers:", response.headers);
                 
                 if (!response.ok) {
                     let errorMessage = `Access denied: ${response.status}`;
@@ -681,11 +640,7 @@
                         const errorData = await response.json();
                         console.error('API Error data:', errorData);
                         errorMessage = errorData.error || errorMessage;
-                        if (errorData.details) {
-                            console.error('Server error details:', errorData.details);
-                        }
                     } catch (parseError) {
-                        console.error('Could not parse error response:', parseError);
                         const errorText = await response.text();
                         console.error('Raw error response:', errorText);
                     }
@@ -712,15 +667,11 @@
 
         function populateDropdownFilters(data) {
             if (!data.metadata) return;
-            
-            // Populate Income Type filter
             const incomeTypeFilter = document.getElementById('incomeTypeFilter');
             incomeTypeFilter.innerHTML = '<option value="">All Income Types</option>';
             data.metadata.incomeTypes.forEach(type => {
                 incomeTypeFilter.innerHTML += `<option value="${type}">${type}</option>`;
             });
-            
-            // Populate Currency filter
             const currencyFilter = document.getElementById('currencyFilter');
             currencyFilter.innerHTML = '<option value="">All Currencies</option>';
             data.metadata.currencies.forEach(currency => {
@@ -730,24 +681,12 @@
 
         function displayDataAsTable(data) {
             const tableContent = document.getElementById('tableContent');
-            const recordCount = document.getElementById('recordCount');
-            
             if (!data.results || data.results.length === 0) {
-                tableContent.innerHTML = `
-                    <div class="no-data">
-                        <h3>No data found for your account</h3>
-                        <p>Contact your administrator if you believe this is an error.</p>
-                    </div>
-                `;
-                recordCount.textContent = '0 records';
-                document.getElementById('paginationContainer').style.display = 'none';
+                tableContent.innerHTML = '<div class="no-data"><h3>No data found</h3></div>';
                 return;
             }
 
-            // Use filtered data if available, otherwise use all data
             const displayData = filteredData || data.results;
-            
-            // Calculate pagination
             const totalRecords = displayData.length;
             const totalPages = Math.ceil(totalRecords / recordsPerPage);
             const startIndex = (currentPage - 1) * recordsPerPage;
@@ -756,11 +695,9 @@
             
             updateRecordCount(pageData.length, totalRecords, startIndex + 1, Math.min(endIndex, totalRecords));
             
-            // Use column order and headers from API response
             const columnOrder = data.columnOrder || [];
             const columnHeaders = data.columnHeaders || {};
             
-            // Get all properties except Client, but respect the order if provided
             let properties = [];
             if (columnOrder.length > 0) {
                 properties = columnOrder.filter(col => {
@@ -776,23 +713,15 @@
                 properties = Array.from(propSet);
             }
             
-            let html = `
-                <div class="table-wrapper">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-            `;
+            let html = '<div class="table-wrapper"><table class="data-table"><thead><tr>';
             
-            // Create headers with custom names and sort functionality
             properties.forEach(prop => {
                 const displayName = columnHeaders[prop] || prop;
                 html += `<th data-column="${prop}" onclick="sortTable('${prop}')">${displayName}<span class="sort-indicator"></span></th>`;
             });
-            html += `</tr></thead><tbody id="tableBody">`;
+            html += '</tr></thead><tbody>';
             
-            // Create rows
             pageData.forEach((record, index) => {
-                // Check if VOID field exists and handle gracefully
                 const voidProperty = record.properties['VOID?'];
                 const isVoided = voidProperty ? voidProperty?.checkbox === true : false;
                 const rowClass = isVoided ? 'void-row' : '';
@@ -809,10 +738,7 @@
             html += '</tbody></table></div>';
             tableContent.innerHTML = html;
             
-            // Update pagination
             updatePagination(totalPages, totalRecords);
-            
-            // Show summary boxes
             document.getElementById('summaryContainer').style.display = 'grid';
             updateSummaryBoxes();
         }
@@ -820,14 +746,12 @@
         function sortTable(column) {
             if (!currentData || !currentData.results) return;
             
-            // Toggle sort order
             if (sortOrder[column] === 'asc') {
                 sortOrder[column] = 'desc';
             } else {
                 sortOrder[column] = 'asc';
             }
             
-            // Clear other column sorts (single column sort)
             Object.keys(sortOrder).forEach(col => {
                 if (col !== column) {
                     delete sortOrder[col];
@@ -838,7 +762,6 @@
                 }
             });
             
-            // Update header appearance
             const headers = document.querySelectorAll('th[data-column]');
             headers.forEach(header => {
                 const col = header.getAttribute('data-column');
@@ -848,7 +771,6 @@
                 }
             });
             
-            // Sort the filtered data if it exists, otherwise sort all data
             const dataToSort = filteredData || currentData.results;
             dataToSort.sort((a, b) => {
                 const aValue = getPropertySortValue(a.properties[column]);
@@ -860,14 +782,12 @@
                 return sortOrder[column] === 'asc' ? comparison : -comparison;
             });
             
-            // Update the sorted data
             if (filteredData) {
                 filteredData = dataToSort;
             } else {
                 currentData.results = dataToSort;
             }
             
-            // Reset to first page and re-render
             currentPage = 1;
             displayDataAsTable(currentData);
         }
@@ -894,15 +814,373 @@
                     return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
             }
         }
-        
-        function applyFilters() {
-            filteredData = getFilteredDataByDateAndUnpaid();
+
+        function getFilteredDataByDateAndUnpaid() {
+            if (!currentData || !currentData.results) return [];
             
-            // Apply search filter if there's a search term
-            const searchTerm = document.getElementById('searchBox').value.toLowerCase().trim();
-            if (searchTerm) {
-                filteredData = filteredData.filter(record => {
-                    const searchableText = Object.values(record.properties).map(property => {
-                        if (!property) return '';
-                        return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
+            let filtered = [...currentData.results];
+            
+            if (!showVoidedItems) {
+                filtered = filtered.filter(record => {
+                    const voidProperty = record.properties['VOID?'];
+                    if (!voidProperty) return true;
+                    const isVoided = voidProperty?.checkbox === true;
+                    return !isVoided;
+                });
+            }
+            
+            if (selectedIncomeType) {
+                filtered = filtered.filter(record => {
+                    const incomeType = record.properties['Income Type']?.select?.name;
+                    return incomeType === selectedIncomeType;
+                });
+            }
+            
+            if (selectedCurrency) {
+                filtered = filtered.filter(record => {
+                    const currency = record.properties['Currency']?.select?.name;
+                    return currency === selectedCurrency;
+                });
+            }
+            
+                    const dateProperty = record.properties['Invoice date'];
+                    if (!dateProperty || !dateProperty.date) return false;
+                    
+                    const recordDate = new Date(dateProperty.date.start);
+                    const now = new Date();
+                    
+                    if (currentDateFilter === '30') {
+                        const thirtyDaysAgo = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+                        return recordDate >= thirtyDaysAgo;
+                    } else if (currentDateFilter === '90') {
+                        const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
+                        return recordDate >= ninetyDaysAgo;
+                    } else if (currentDateFilter === '180') {
+                        const sixMonthsAgo = new Date(now.getTime() - (180 * 24 * 60 * 60 * 1000));
+                        return recordDate >= sixMonthsAgo;
+                    } else if (currentDateFilter === '365') {
+                        const oneYearAgo = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000));
+                        return recordDate >= oneYearAgo;
+                    } else {
+                        return recordDate.getFullYear().toString() === currentDateFilter;
+                    }
+                });
+            }
+            
+            if (isUnpaidFilter) {
+                filtered = filtered.filter(record => {
+                    const amountReceived = record.properties['Amount Received'];
+                    return !amountReceived || 
+                           !amountReceived.number || 
+                           amountReceived.number === 0 || 
+                           amountReceived.number === null;
+                });
+            }
+            
+            return filtered;
+        }
+        
+        function updatePagination(totalPages, totalRecords) {
+            const paginationContainer = document.getElementById('paginationContainer');
+            const paginationInfo = document.getElementById('paginationInfo');
+            const prevBtn = document.getElementById('prevBtn');
+            const nextBtn = document.getElementById('nextBtn');
+            const pageNumbers = document.getElementById('pageNumbers');
+            
+            if (totalPages <= 1) {
+                paginationContainer.style.display = 'none';
+                return;
+            }
+            
+            paginationContainer.style.display = 'flex';
+            
+            const startRecord = (currentPage - 1) * recordsPerPage + 1;
+            const endRecord = Math.min(currentPage * recordsPerPage, totalRecords);
+            paginationInfo.textContent = `Showing ${startRecord}-${endRecord} of ${totalRecords} records`;
+            
+            prevBtn.disabled = currentPage === 1;
+            nextBtn.disabled = currentPage === totalPages;
+            
+            let pageNumbersHtml = '';
+            const showPages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(showPages / 2));
+            let endPage = Math.min(totalPages, startPage + showPages - 1);
+            
+            if (endPage - startPage < showPages - 1) {
+                startPage = Math.max(1, endPage - showPages + 1);
+            }
+            
+            for (let i = startPage; i <= endPage; i++) {
+                const activeClass = i === currentPage ? 'active' : '';
+                pageNumbersHtml += `<button class="pagination-btn ${activeClass}" onclick="goToPage(${i})">${i}</button>`;
+            }
+            
+            pageNumbers.innerHTML = pageNumbersHtml;
+        }
+        
+        function changePage(direction) {
+            const totalPages = Math.ceil((filteredData || currentData.results).length / recordsPerPage);
+            const newPage = currentPage + direction;
+            
+            if (newPage >= 1 && newPage <= totalPages) {
+                currentPage = newPage;
+                displayDataAsTable(currentData);
+            }
+        }
+        
+        function goToPage(page) {
+            currentPage = page;
+            displayDataAsTable(currentData);
+        }
+
+        function updateRecordCount(displayed, total, start, end) {
+            const recordCount = document.getElementById('recordCount');
+            if (start && end) {
+                recordCount.textContent = `${start}-${end} of ${total} records`;
+            } else if (displayed === total) {
+                recordCount.textContent = `${total} record${total !== 1 ? 's' : ''}`;
+            } else {
+                recordCount.textContent = `${displayed} of ${total} record${total !== 1 ? 's' : ''}`;
+            }
+        }
+
+        function updateSummaryBoxes() {
+            const displayData = filteredData || currentData.results;
+            
+            const totalByCurrency = {};
+            const unpaidByCurrency = {};
+            
+            displayData.forEach(record => {
+                const currency = record.properties['Currency']?.select?.name || 'Unknown';
+                const grossAmount = record.properties['Gross']?.number || 0;
+                const amountReceived = record.properties['Amount Received']?.number || 0;
+                
+                if (!totalByCurrency[currency]) totalByCurrency[currency] = 0;
+                totalByCurrency[currency] += grossAmount;
+                
+                if (!amountReceived || amountReceived === 0) {
+                    if (!unpaidByCurrency[currency]) unpaidByCurrency[currency] = 0;
+                    unpaidByCurrency[currency] += grossAmount;
+                }
+            });
+            
+            const totalIncomeEl = document.getElementById('totalIncome');
+            const totalIncomeBreakdownEl = document.getElementById('totalIncomeBreakdown');
+            
+            let totalIncomeText = '';
+            let totalIncomeBreakdown = '';
+            
+            Object.entries(totalByCurrency).forEach(([currency, amount]) => {
+                if (totalIncomeText) totalIncomeText += ' | ';
+                totalIncomeText += `${currency} ${formatNumber(amount)}`;
+                
+                if (totalIncomeBreakdown) totalIncomeBreakdown += '\n';
+                totalIncomeBreakdown += `${currency}: ${formatNumber(amount)}`;
+            });
+            
+            totalIncomeEl.textContent = totalIncomeText || 'No data';
+            totalIncomeBreakdownEl.textContent = totalIncomeBreakdown;
+            
+            const unpaidIncomeEl = document.getElementById('unpaidIncome');
+            const unpaidIncomeBreakdownEl = document.getElementById('unpaidIncomeBreakdown');
+            
+            let unpaidIncomeText = '';
+            let unpaidIncomeBreakdown = '';
+            
+            Object.entries(unpaidByCurrency).forEach(([currency, amount]) => {
+                if (unpaidIncomeText) unpaidIncomeText += ' | ';
+                unpaidIncomeText += `${currency} ${formatNumber(amount)}`;
+                
+                if (unpaidIncomeBreakdown) unpaidIncomeBreakdown += '\n';
+                unpaidIncomeBreakdown += `${currency}: ${formatNumber(amount)}`;
+            });
+            
+            unpaidIncomeEl.textContent = unpaidIncomeText || 'All paid';
+            unpaidIncomeBreakdownEl.textContent = unpaidIncomeBreakdown;
+        }
+
+        function formatNumber(num) {
+            if (num === null || num === undefined || num === '') return '';
+            return Number(num).toLocaleString('en-US', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+        
+        function formatPercentage(num) {
+            if (num === null || num === undefined || num === '') return '';
+            return (Number(num) * 100).toFixed(2) + '%';
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = months[date.getMonth()];
+            const year = date.getFullYear();
+            return `${day} ${month} ${year}`;
+        }
+
+        function getTagClass(tagName) {
+            const name = tagName.toLowerCase().replace(/\s+/g, '-');
+            
+            const incomeTypeMap = {
+                'royalties': 'royalties',
+                'publishing': 'publishing', 
+                'master': 'master',
+                'royalties - publishing': 'publishing',
+                'royalties - master': 'master'
+            };
+            
+            if (incomeTypeMap[name]) {
+                return incomeTypeMap[name];
+            }
+            
+            const colorMap = {
+                'gray': 'gray', 'grey': 'gray',
+                'brown': 'brown', 'orange': 'orange',
+                'yellow': 'yellow', 'green': 'green',
+                'blue': 'blue', 'purple': 'purple',
+                'pink': 'pink', 'red': 'red'
+            };
+            
+            for (const [key, value] of Object.entries(colorMap)) {
+                if (name.includes(key)) return value;
+            }
+            
+            const colors = ['blue', 'green', 'purple', 'orange', 'pink', 'yellow'];
+            let hash = 0;
+            for (let i = 0; i < tagName.length; i++) {
+                hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            return colors[Math.abs(hash) % colors.length];
+        }
+
+        function getPropertyValue(property, columnName) {
+            if (!property) return '';
+            
+            if (columnName === 'Commission %' && property.type === 'number') {
+                return formatPercentage(property.number);
+            }
+            
+            switch (property.type) {
+                case 'title':
+                    return property.title.map(t => t.plain_text).join('');
+                case 'rich_text':
+                    return property.rich_text.map(t => t.plain_text).join('');
+                case 'number':
+                    return property.number !== null ? formatNumber(property.number) : '';
+                case 'select':
+                    if (property.select) {
+                        const tagClass = getTagClass(property.select.name);
+                        return `<span class="tag ${tagClass}">${property.select.name}</span>`;
+                    }
+                    return '';
+                case 'multi_select':
+                    return property.multi_select.map(tag => {
+                        const tagClass = getTagClass(tag.name);
+                        return `<span class="tag ${tagClass}">${tag.name}</span>`;
                     }).join(' ');
+                case 'date':
+                    return property.date ? formatDate(property.date.start) : '';
+                case 'checkbox':
+                    return property.checkbox ? '✅' : '❌';
+                case 'url':
+                    return property.url ? `<a href="${property.url}" target="_blank" style="color: #667eea;">🔗 Link</a>` : '';
+                case 'email':
+                    return property.email ? `<a href="mailto:${property.email}" style="color: #667eea;">📧 ${property.email}</a>` : '';
+                case 'phone_number':
+                    return property.phone_number ? `📞 ${property.phone_number}` : '';
+                case 'status':
+                    if (property.status) {
+                        const status = property.status.name.toLowerCase().replace(/\s+/g, '-');
+                        return `<span class="status ${status}">${property.status.name}</span>`;
+                    }
+                    return '';
+                case 'people':
+                    return property.people.map(person => `👤 ${person.name}`).join(', ');
+                case 'relation':
+                    if (property.relation && property.relation.length > 0) {
+                        if (property.relation_titles) {
+                            return property.relation_titles;
+                        }
+                        return `${property.relation.length} linked item${property.relation.length !== 1 ? 's' : ''}`;
+                    }
+                    return '';
+                case 'formula':
+                    if (!property.formula) return '';
+                    const formulaResult = property.formula;
+                    if (formulaResult.type === 'string') {
+                        return formulaResult.string || '';
+                    } else if (formulaResult.type === 'number') {
+                        if (columnName === 'Commission %') {
+                            return formatPercentage(formulaResult.number);
+                        }
+                        return formulaResult.number !== null ? formatNumber(formulaResult.number) : '';
+                    } else if (formulaResult.type === 'boolean') {
+                        return formulaResult.boolean ? '✅' : '❌';
+                    } else if (formulaResult.type === 'date') {
+                        return formulaResult.date ? formatDate(formulaResult.date.start) : '';
+                    } else {
+                        return formulaResult.string || formulaResult.number || '';
+                    }
+                case 'rollup':
+                    if (!property.rollup) return '';
+                    switch (property.rollup.type) {
+                        case 'number':
+                            if (columnName === 'Commission %') {
+                                return formatPercentage(property.rollup.number);
+                            }
+                            return property.rollup.number ? formatNumber(property.rollup.number) : '';
+                        case 'date':
+                            return property.rollup.date ? formatDate(property.rollup.date.start) : '';
+                        case 'array':
+                            if (property.rollup.array && property.rollup.array.length > 0) {
+                                return property.rollup.array.map(item => {
+                                    if (item.type === 'number') {
+                                        if (columnName === 'Commission %') {
+                                            return formatPercentage(item.number);
+                                        }
+                                        return item.number ? formatNumber(item.number) : '';
+                                    } else if (item.type === 'rich_text') {
+                                        return item.rich_text.map(t => t.plain_text).join('');
+                                    } else if (item.type === 'title') {
+                                        return item.title.map(t => t.plain_text).join('');
+                                    }
+                                    return '';
+                                }).filter(val => val).join(', ');
+                            }
+                            return '';
+                        default:
+                            return '';
+                    }
+                case 'files':
+                    if (property.files && property.files.length > 0) {
+                        return `📎 ${property.files.length} file${property.files.length !== 1 ? 's' : ''}`;
+                    }
+                    return '';
+                case 'created_time':
+                    return formatDate(property.created_time);
+                case 'last_edited_time':
+                    return formatDate(property.last_edited_time);
+                case 'created_by':
+                    return property.created_by.name || 'Unknown';
+                case 'last_edited_by':
+                    return property.last_edited_by.name || 'Unknown';
+                default:
+                    console.log('Unhandled property type:', property.type, property);
+                    return JSON.stringify(property).substring(0, 50) + '...';
+            }
+        }
+
+        function showError(message) {
+            const tableContent = document.getElementById('tableContent');
+            tableContent.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        window.loadData = loadData;
+    </script>
+</body>
+</html>
