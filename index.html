@@ -978,6 +978,12 @@ function updateSummaryBoxes() {
   const unpaidByCurr = {};
 
   rows.forEach(rec => {
+    // ✅ Skip voided rows
+    const voidProp = rec.properties?.['VOID?'];
+    if (voidProp && voidProp.type === 'checkbox' && voidProp.checkbox === true) {
+      return;
+    }
+
     const net = getNumberProp(rec, ['Net Amount', 'Net']);
     if (net === null) return; // skip if no net value
 
