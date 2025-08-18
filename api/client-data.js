@@ -151,7 +151,7 @@ function getUniversalColumnConfig() {
     columns: [
       'Invoice date',           // Adjust these to match your actual Notion columns
       'Inv #',
-      'Vendor2',
+      'Vendor address',
       'Description',
       'Income Type',
       'Net',
@@ -169,7 +169,7 @@ function getUniversalColumnConfig() {
     columnHeaders: {
       'Invoice date': 'Date (Inv/Stmt)',
       'Inv #': 'Invoice #',
-      'Vendor2': 'Vendor',
+      'Vendor address': 'Vendor',
       'Description': 'Description',
       'Income Type': 'Income Type',
       'Net': 'Net Amount',
