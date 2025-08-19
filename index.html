@@ -5,24 +5,33 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Client Dashboard</title>
 
-<!-- ApexCharts -->
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
 <style>
   :root{ --gap:16px; --radius:12px; }
   body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; margin:0; background:#f6f7fb; color:#222; }
 
-  /* Header (merged) */
+  /* Header */
   .dashboard-header{
     display:flex;align-items:center;justify-content:space-between;
     background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-    color:#fff;padding:5px 5px;margin:0 0 var(--gap) 0;border-radius:0;
+    color:#fff;padding:6px 10px;margin:0 0 8px 0; /* tighter gap ↓ */
   }
-  .header-left h1{margin:0;font-size:22px;font-weight:600}
-  .header-left p{margin:4px 0 0;font-size:13px;opacity:.9}
-  .secure-chip{display:flex;gap:2px;align-items:center;white-space:nowrap;padding:2px 4px;border-radius:5px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);font-size:13px;}
+  .secure-chip{display:flex;gap:6px;align-items:center;white-space:nowrap;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);font-size:13px;}
+  .hdr-right{display:flex;align-items:center;gap:8px}
+  .hdr-title{font-weight:700;font-size:14px}
+  .hdr-menu{position:relative}
+  .hdr-btn{
+    display:flex;align-items:center;gap:6px;
+    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);
+    color:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;
+  }
+  .hdr-dd{position:absolute;right:0;top:110%;background:#fff;color:#1f2330;border:1px solid #e4e7ef;border-radius:10px;box-shadow:0 12px 30px rgba(31,35,48,.14);display:none;min-width:220px;overflow:hidden}
+  .hdr-menu.open .hdr-dd{display:block}
+  .hdr-dd a{display:block;padding:10px 12px;text-decoration:none;color:#1f2330;font-size:13px}
+  .hdr-dd a:hover{background:#f6f7fb}
 
-  .page{padding:20px}
+  .page{padding:16px 20px 20px}
 
   /* Summary */
   .summary-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:var(--gap);}
@@ -41,52 +50,44 @@
   .search-box{border:2px solid #e5e7f1;border-radius:8px;padding:8px 12px;font-size:14px;width:260px}
   .export-btn{background:#2fbf71;color:#fff;border:none;border-radius:8px;padding:9px 14px;cursor:pointer}
   .spacer{flex:1}
+  #recordCount{color:#6e7587;font-size:14px}
 
-  /* Multi-select dropdown */
-  .msel{position:relative}
-  .msel-btn{
-    display:flex;align-items:center;gap:6px;
-    border:1px solid #e0e3ea;background:#fff;border-radius:8px;padding:6px 10px;font-size:12px;cursor:pointer
-  }
-  .msel-panel{
-    position:absolute;top:110%;left:0;z-index:20;background:#fff;border:1px solid #e0e3ea;border-radius:10px;
-    width:260px;box-shadow:0 10px 30px rgba(24,27,51,.12);padding:8px;display:none;
-  }
-  .msel.open .msel-panel{display:block}
-  .msel-search{width:100%;padding:8px 10px;border:1px solid #e6e8f1;border-radius:8px;margin-bottom:8px;font-size:13px}
-  .msel-list{max-height:220px;overflow:auto;padding-right:4px}
-  .msel-item{display:flex;align-items:center;gap:8px;padding:6px;border-radius:6px;cursor:pointer}
-  .msel-item:hover{background:#f6f7fb}
-  .msel-footer{display:flex;justify-content:space-between;gap:8px;margin-top:8px}
-  .msel-apply,.msel-clear{flex:1;border:none;border-radius:8px;padding:8px 10px;cursor:pointer}
-  .msel-apply{background:#667eea;color:#fff}
-  .msel-clear{background:#f1f2f8}
-
-  /* Tabs */
-  .tabs{display:flex;gap:10px;margin-bottom:var(--gap)}
+  /* Tabs (now inside toolbar, right-aligned) */
+  .tabs{display:flex;gap:10px;margin-left:6px}
   .tab-btn{background:#fff;border:1px solid #e0e3ea;border-radius:999px;padding:6px 14px;cursor:pointer}
   .tab-btn.active{background:#2f2e41;color:#fff;border-color:#2f2e41}
 
   /* Table */
   .card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
   .table-wrapper{overflow:auto;max-height:60vh}
-  table{width:100%;border-collapse:collapse;font-size:14px}
-  th{position:sticky;top:0;background:#f6f7fb;border-bottom:2px solid #e5e7f1;text-align:left;padding:12px;font-weight:600;cursor:pointer}
-  td{border-bottom:1px solid #eef0f5;padding:12px;vertical-align:top}
-  tr:hover{background:#fafbff}
+  table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed;} /* fixed layout for widths */
+  th{position:sticky;top:0;background:#f6f7fb;border-bottom:2px solid #e5e7f1;text-align:left;padding:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+  td{border-bottom:1px solid #eef0f5;padding:12px;vertical-align:top;word-wrap:break-word}
+
+  /* Column width tweaks (based on your configured order) */
+  /* 1: Date, 2: Vendor, 3: Description, 4: Income Type */
+  th:nth-child(3), td:nth-child(3){width:34%;}      /* Description wider */
+  th:nth-child(4), td:nth-child(4){width:12%;}      /* Income Type narrower */
+  td:nth-child(4){white-space:normal;}              /* wrap tags/text in Income Type */
 
   /* Charts grid (2×2) */
   .charts-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
   .chart-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);padding:12px 12px 6px;display:flex;flex-direction:column;min-height:330px}
   .chart-title{font-weight:700;margin:4px 8px 6px}
   .chart-wrap{flex:1;min-height:280px}
-  @media (max-width:1024px){ .summary-row{grid-template-columns:1fr} .charts-grid{grid-template-columns:1fr} .table-wrapper{max-height:none} }
+  @media (max-width:1024px){
+    .summary-row{grid-template-columns:1fr}
+    .charts-grid{grid-template-columns:1fr}
+    .table-wrapper{max-height:none}
+    th:nth-child(3), td:nth-child(3){width:auto}
+    th:nth-child(4), td:nth-child(4){width:auto}
+  }
 
   .loading{padding:60px;text-align:center;color:#6e7587}
   .error{padding:40px;margin:20px;background:#fde9ec;border:1px solid #f7c9d1;border-radius:12px;color:#8d2a3b;text-align:center}
 
   /* Colour tags */
-  .tag{padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;display:inline-block}
+  .tag{padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;display:inline-block;white-space:normal}
   .tag.blue{background:#e6f0ff;color:#1e5bd9}
   .tag.green{background:#e9f7ef;color:#1f7a43}
   .tag.purple{background:#eee9ff;color:#5c3fd6}
@@ -104,11 +105,21 @@
       <span>🔒 Secure access</span><span>•</span>
       <span>User: <span id="userEmail">Loading...</span></span>
     </div>
-  <div style="font-weight:700;font-size:10px">
-    <span id="clientDisplay">Finance Dashboard</span>
-  </div>
-</div>
-    
+
+    <div class="hdr-right">
+      <div class="hdr-title"><span id="clientDisplay">Linden Jay Dashboard</span></div>
+      <div class="hdr-menu" id="hdrMenu">
+        <button class="hdr-btn" type="button" onclick="document.getElementById('hdrMenu').classList.toggle('open')">
+          Open
+          <span>▾</span>
+        </button>
+        <div class="hdr-dd" onclick="document.getElementById('hdrMenu').classList.remove('open')">
+          <a href="#" id="linkFinance">Finance Dashboard</a>
+          <a href="#" id="linkAgreement">Agreement Tracker</a>
+          <a href="#" id="linkRoyalty">Royalty Tracker</a>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="page">
@@ -140,20 +151,21 @@
       <button class="filter-btn" id="unpaidBtn" onclick="applyUnpaidFilter()">Unpaid Income</button>
       <button class="filter-btn" id="voidBtn" onclick="toggleVoidFilter()">Show Voided</button>
 
-      <!-- Custom multi-selects -->
+      <!-- (optional) custom multis -->
       <div class="msel" id="msIncomeType"></div>
       <div class="msel" id="msCurrency"></div>
 
       <div class="spacer"></div>
+
       <input type="text" class="search-box" id="searchBox" placeholder="Search data…" />
       <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
-      <span id="recordCount" style="color:#6e7587;font-size:14px"></span>
-    </div>
+      <span id="recordCount"></span>
 
-    <!-- Tabs -->
-    <div class="tabs">
-      <button class="tab-btn active" id="tabTable"  onclick="switchTab('table')">Table</button>
-      <button class="tab-btn" id="tabCharts" onclick="switchTab('charts')">Charts</button>
+      <!-- Tabs moved here -->
+      <div class="tabs">
+        <button class="tab-btn active" id="tabTable"  onclick="switchTab('table')">Table</button>
+        <button class="tab-btn" id="tabCharts" onclick="switchTab('charts')">Charts</button>
+      </div>
     </div>
 
     <!-- Charts -->
@@ -197,7 +209,6 @@ let currentDateFilter = 'all';
 let isUnpaidFilter = false;
 let showVoidedItems = false;
 
-/* Multi-select state (Sets) */
 const selectedIncomeTypes = new Set();
 const selectedCurrencies  = new Set();
 
@@ -283,35 +294,22 @@ function makeMultiSelect(el, {label, options, selectedSet, onApply}){
         list.appendChild(row);
       });
   }
-  function updateCount(){
-    count.textContent = selectedSet.size ? `(${selectedSet.size})` : '';
-  }
+  function updateCount(){ count.textContent = selectedSet.size ? \`(\${selectedSet.size})\` : ''; }
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.msel').forEach(x=>{ if(x!==el) x.classList.remove('open'); });
-    el.classList.toggle('open');
-    renderList(); updateCount();
+    el.classList.toggle('open'); renderList(); updateCount();
   });
   srch.addEventListener('input', ()=>renderList(srch.value));
-  clearB.addEventListener('click', ()=>{
-    selectedSet.clear(); renderList(srch.value); updateCount();
-  });
+  clearB.addEventListener('click', ()=>{ selectedSet.clear(); renderList(srch.value); updateCount(); });
   applyB.addEventListener('click', ()=>{
-    // rebuild selection from list checkboxes
     selectedSet.clear();
     list.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
       const text = cb.parentElement.querySelector('span').textContent;
       if (cb.checked) selectedSet.add(text);
     });
-    updateCount();
-    el.classList.remove('open');
-    onApply && onApply();
+    updateCount(); el.classList.remove('open'); onApply && onApply();
   });
-
-  // click outside
-  document.addEventListener('click', (e)=>{
-    if (!el.contains(e.target)) el.classList.remove('open');
-  });
-
+  document.addEventListener('click', (e)=>{ if (!el.contains(e.target)) el.classList.remove('open'); });
   renderList(); updateCount();
 }
 
@@ -340,30 +338,24 @@ async function loadData(userEmail, secureKey, timestamp){
       throw new Error(msg);
     }
     const data = await resp.json();
-    if (data.authorizedClient) document.getElementById('clientDisplay').textContent = `${data.authorizedClient} Dashboard`;
+    const cd = document.getElementById('clientDisplay');
+    if (data.authorizedClient && cd) cd.textContent = `${data.authorizedClient} Dashboard`;
     currentData = data;
 
-    // Build multi-selects
-    makeMultiSelect(
-      document.getElementById('msIncomeType'),
-      {
-        label:'Income Types',
-        options:[...(data.metadata?.incomeTypes || [])],
-        selectedSet:selectedIncomeTypes,
-        onApply:applyFilters
-      }
-    );
-    makeMultiSelect(
-      document.getElementById('msCurrency'),
-      {
-        label:'Currencies',
-        options:[...(data.metadata?.currencies || [])],
-        selectedSet:selectedCurrencies,
-        onApply:applyFilters
-      }
-    );
+    makeMultiSelect(document.getElementById('msIncomeType'),{
+      label:'Income Types',
+      options:[...(data.metadata?.incomeTypes || [])],
+      selectedSet:selectedIncomeTypes,
+      onApply:applyFilters
+    });
+    makeMultiSelect(document.getElementById('msCurrency'),{
+      label:'Currencies',
+      options:[...(data.metadata?.currencies || [])],
+      selectedSet:selectedCurrencies,
+      onApply:applyFilters
+    });
 
-    applyFilters();   // builds table, charts, summaries
+    applyFilters();
     switchTab('table');
   }catch(e){ console.error(e); showError(`Access Denied: ${e.message}`); }
 }
@@ -373,20 +365,15 @@ function applyFilters(){
   if (!currentData) return;
   let rows = [...(currentData.results || [])];
 
-  // hide voided unless toggled
   if (!showVoidedItems){
     rows = rows.filter(r => !(r.properties?.['VOID?']?.checkbox === true));
   }
-
-  // multi-select Income Types
   if (selectedIncomeTypes.size){
     rows = rows.filter(r=>{
       const t = r.properties?.['Income Type']?.select?.name;
       return t && selectedIncomeTypes.has(t);
     });
   }
-
-  // multi-select Currencies (invoice currency)
   if (selectedCurrencies.size){
     rows = rows.filter(r=>{
       const c = r.properties?.['Currency (Inv/Stmt)']?.select?.name
@@ -394,8 +381,6 @@ function applyFilters(){
       return c && selectedCurrencies.has(c);
     });
   }
-
-  // date range / year
   if (currentDateFilter !== 'all'){
     rows = rows.filter(r=>{
       const d = r.properties?.['Invoice date']?.date?.start;
@@ -409,16 +394,12 @@ function applyFilters(){
       }
     });
   }
-
-  // unpaid
   if (isUnpaidFilter){
     rows = rows.filter(r=>{
       const n = r.properties?.['Amount Received']?.number;
       return n==null || n===0;
     });
   }
-
-  // search
   const q = (document.getElementById('searchBox').value || '').toLowerCase().trim();
   if (q){
     rows = rows.filter(rec=>{
@@ -426,7 +407,6 @@ function applyFilters(){
       return s.toLowerCase().includes(q);
     });
   }
-
   filteredData = rows;
 
   currentPage = 1;
@@ -445,7 +425,6 @@ function displayTable(data){
     document.getElementById('recordCount').textContent='0 records';
     return;
   }
-
   const order = data.columnOrder || [];
   let props = [];
   if (order.length){ props = order.filter(c => rows.some(r=>r.properties[c])); }
@@ -509,11 +488,10 @@ function changePage(delta){
   const np = currentPage+delta; if (np>=1 && np<=total){ currentPage=np; displayTable(currentData); }
 }
 
-/* =================== VALUE HELPERS + TAG COLOURS =================== */
+/* =================== VALUE HELPERS =================== */
 function formatNumber(n){ return Number(n||0).toLocaleString('en-GB',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function tagClassByName(name, column){
   const n=(name||'').toLowerCase();
-  // Income Type suggestions
   if (column==='Income Type'){
     if (n.includes('publishing')) return 'green';
     if (n.includes('master'))     return 'orange';
@@ -521,7 +499,6 @@ function tagClassByName(name, column){
     if (n.includes('other'))      return 'gray';
     return 'purple';
   }
-  // Currency tags
   if (column.startsWith('Currency')){
     if (n==='gbp') return 'gold';
     if (n==='usd') return 'blue';
@@ -599,76 +576,13 @@ function getSortValue(prop){
   return getPlainValue(prop).toLowerCase();
 }
 
-  // ---- Helper: get a reliable vendor name for a record
-function getVendorName(rec) {
-  if (!rec || !rec.properties) return 'Unknown';
-
-  // 1) Try common keys in order
-  const candidates = ['Vendor1', 'Vendor', 'Vendor Name', 'Vendor/Label'];
-  for (const key of candidates) {
-    const p = rec.properties[key];
-    if (p) {
-      const txt =
-        // relation resolved by backend?
-        (p.relation_titles ? p.relation_titles :
-        // title or rich_text or select etc.
-        getPlainValue(p)).trim();
-      if (txt) return txt;
-    }
-  }
-
-  // 2) Try to find whichever property the backend mapped to display header "Vendor"
-  try {
-    const headers = currentData?.columnHeaders || {};
-    const keyForVendor = Object.keys(headers).find(k => headers[k] === 'Vendor');
-    if (keyForVendor) {
-      const p = rec.properties[keyForVendor];
-      const txt = (p?.relation_titles ? p.relation_titles : getPlainValue(p)).trim();
-      if (txt) return txt;
-    }
-  } catch (e) {
-    // ignore
-  }
-
-  // 3) Last resort: scan for the first property that looks like a vendor-ish text
-  for (const [k, p] of Object.entries(rec.properties)) {
-    const low = k.toLowerCase();
-    if (low.includes('vendor')) {
-      const txt = (p?.relation_titles ? p.relation_titles : getPlainValue(p)).trim();
-      if (txt) return txt;
-    }
-  }
-
-  return 'Unknown';
-}
-
-/* =================== SUMMARIES =================== */
-function updateSummaryBoxes(){
-  const rows = filteredData || currentData?.results || [];
-  const totalBy={}, unpaidBy={};
-  rows.forEach(r=>{
-    if (!showVoidedItems && r.properties?.['VOID?']?.checkbox) return;
-    const net = r.properties?.['Net']?.number ?? r.properties?.['Net Amount']?.number ?? null;
-    if (net==null) return;
-    const rec = r.properties?.['Amount Received']?.number;
-    const cur = r.properties?.['Currency (Inv/Stmt)']?.select?.name || r.properties?.['Currency']?.select?.name || 'Unknown';
-    totalBy[cur]=(totalBy[cur]||0)+net;
-    if (rec==null || rec===0) unpaidBy[cur]=(unpaidBy[cur]||0)+net;
-  });
-  const line = o => Object.entries(o).map(([c,a])=>`${c} ${formatNumber(a)}`).join(' | ') || '—';
-  document.getElementById('totalIncome').textContent = line(totalBy);
-  document.getElementById('unpaidIncome').textContent = line(unpaidBy);
-}
-
-/* =================== CHARTS =================== */
+/* =================== CHARTS (unchanged core) =================== */
 let chMonthly=null, chCurrency=null, chVendors=null, chType=null;
-
 function ensureCharts(){
   if (!chMonthly){
     chMonthly = new ApexCharts(document.querySelector('#chartMonthly'), {
       chart:{ type:'area', height:'100%', toolbar:{show:false} },
-      grid:{ strokeDashArray:3 },
-      dataLabels:{ enabled:false },
+      grid:{ strokeDashArray:3 }, dataLabels:{ enabled:false },
       stroke:{ curve:'smooth', width:2 },
       fill:{ type:'gradient', gradient:{opacityFrom:.35, opacityTo:.05} },
       xaxis:{ categories:[], labels:{rotate:-45} },
@@ -704,12 +618,10 @@ function ensureCharts(){
     }); chType.render();
   }
 }
-
 function updateCharts(){
   ensureCharts();
   const rows = filteredData || currentData?.results || [];
 
-  // Monthly
   const m = new Map();
   rows.forEach(r=>{
     const d = r.properties?.['Invoice date']?.date?.start;
@@ -724,7 +636,6 @@ function updateCharts(){
   chMonthly.updateOptions({ xaxis:{ categories:months } }, false, true);
   chMonthly.updateSeries([{ name:'Net', data:mVals }]);
 
-  // Currency (donut)
   const cMap = {};
   rows.forEach(r=>{
     const n = r.properties?.['Net']?.number ?? r.properties?.['Net Amount']?.number ?? 0;
@@ -736,31 +647,23 @@ function updateCharts(){
   chCurrency.updateOptions({ labels:cLabels }, false, true);
   chCurrency.updateSeries(cSeries);
 
- // Vendors (horizontal bar) – sum Net/Net Amount per resolved Vendor
-const vTotals = {};
-rows.forEach(r => {
-  const net = r.properties?.['Net']?.number ?? r.properties?.['Net Amount']?.number ?? 0;
-  if (!net) return;
-  const vendor = getVendorName(r) || 'Unknown';
-  vTotals[vendor] = (vTotals[vendor] || 0) + net;
-});
+  const vTotals = {};
+  rows.forEach(r => {
+    const net = r.properties?.['Net']?.number ?? r.properties?.['Net Amount']?.number ?? 0;
+    if (!net) return;
+    const vendor = getVendorName(r) || 'Unknown';
+    vTotals[vendor] = (vTotals[vendor] || 0) + net;
+  });
+  let vEntries = Object.entries(vTotals);
+  const nonUnknown = vEntries.filter(([name]) => name !== 'Unknown');
+  if (nonUnknown.length) vEntries = nonUnknown;
+  const top = vEntries.sort((a,b)=>b[1]-a[1]).slice(0, 10).reverse();
+  chVendors.updateOptions({
+    xaxis: { categories: top.map(([name]) => name),
+      labels: { formatter: (v) => Number(v).toLocaleString('en-GB') } }
+  }, false, true);
+  chVendors.updateSeries([{ name: 'Net', data: top.map(([,val]) => +val.toFixed(2)) }]);
 
-// If we only have "Unknown" and nothing else, keep it;
-// otherwise drop pure "Unknown" bucket so real vendors show cleanly.
-let vEntries = Object.entries(vTotals);
-const nonUnknown = vEntries.filter(([name]) => name !== 'Unknown');
-if (nonUnknown.length) vEntries = nonUnknown;
-
-const top = vEntries.sort((a,b)=>b[1]-a[1]).slice(0, 10).reverse();
-chVendors.updateOptions({
-  xaxis: {
-    categories: top.map(([name]) => name),
-    labels: { formatter: (v) => Number(v).toLocaleString('en-GB') }
-  }
-}, false, true);
-chVendors.updateSeries([{ name: 'Net', data: top.map(([,val]) => +val.toFixed(2)) }]);
-
-  // Income by Type (donut)
   const tMap = {};
   rows.forEach(r=>{
     const n = r.properties?.['Net']?.number ?? r.properties?.['Net Amount']?.number ?? 0;
@@ -806,6 +709,12 @@ function exportCSV(){
 
 /* =================== ERROR =================== */
 function showError(msg){ document.getElementById('tableContent').innerHTML = `<div class="error">${msg}</div>`; }
+
+/* Close header dropdown on outside click */
+document.addEventListener('click',(e)=>{
+  const m=document.getElementById('hdrMenu');
+  if (m && !m.contains(e.target)) m.classList.remove('open');
+});
 </script>
 </body>
 </html>
