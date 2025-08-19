@@ -696,12 +696,12 @@
 
       const totalEntries = Object.entries(totalByCurr);
       document.getElementById('totalIncome').textContent =
-        totalEntries.length ? totalEntries.map(([c,a])=>`${c} ${formatNumber(a)}`).join(' | ') : 'No data';
+        totalEntries.length ? totalEntries.map(([c,a])=>`${c} ${formatNumber(a)}`).join(' • ') : 'No data';
       document.getElementById('totalIncomeBreakdown').textContent = '';
 
       const unpaidEntries = Object.entries(unpaidByCurr);
       document.getElementById('unpaidIncome').textContent =
-        unpaidEntries.length ? unpaidEntries.map(([c,a])=>`${c} ${formatNumber(a)}`).join(' | ') : 'All paid';
+        unpaidEntries.length ? unpaidEntries.map(([c,a])=>`${c} ${formatNumber(a)}`).join(' • ') : 'All paid';
       document.getElementById('unpaidIncomeBreakdown').textContent = '';
     }
 
