@@ -17,7 +17,7 @@ module.exports = async function handler(req, res) {
     }
 
     // --- Request params
-    const { userEmail, secureKey, timestamp, client: clientParam } = req.query || {};
+    const { userEmail, secureKey, timestamp, client: clientParam, resolveRelations } = req.query || {};
     if (!userEmail || !secureKey || !timestamp) {
       return res.status(401).json({ error: 'Missing authentication parameters' });
     }
@@ -29,12 +29,7 @@ module.exports = async function handler(req, res) {
     }
 
     // --- Resolve which client’s data to show
-    // Priority:
-    //  1) explicit ?client=... (allowed for admin only; for non-admin must match their mapping)
-    //  2) infer from secureKey (works for admin and non-admin if mapping exists)
-    //  3) fallback to user mapping (non-admin only)
     let clientName = null;
-
     const userMappedClient = getClientForUser(userEmail); // null for admin; defined for members
     const clean = s => (s || '').trim();
 
@@ -42,25 +37,21 @@ module.exports = async function handler(req, res) {
       if (isAdmin) {
         clientName = clean(clientParam);
       } else {
-        // non-admin may only request their own client
         if (clean(clientParam) !== userMappedClient) {
           return res.status(403).json({ error: 'Client access denied for user' });
         }
         clientName = userMappedClient;
       }
     } else if (clientFromKey) {
-      // Use client inferred from the secureKey mapping (works on per-page keys)
       clientName = clientFromKey;
       if (!isAdmin && userMappedClient && clientName !== userMappedClient) {
         return res.status(403).json({ error: 'Client access denied for user' });
       }
     } else {
-      // last resort: non-admin’s mapping
       if (!isAdmin) {
         if (!userMappedClient) return res.status(403).json({ error: 'No client access for user' });
         clientName = userMappedClient;
       } else {
-        // Admin without client hint: this page didn’t pass a client and key didn’t identify one
         return res.status(400).json({ error: 'Admin access requires client context (add ?client=...)' });
       }
     }
@@ -69,7 +60,7 @@ module.exports = async function handler(req, res) {
 
     // --- Notion query with pagination (always filtered to clientName)
     const baseRequestBody = {
-      page_size: 50,
+      page_size: 100, // larger page size (fast mode)
       filter: {
         property: 'Client',
         select: { equals: clientName }
@@ -81,10 +72,14 @@ module.exports = async function handler(req, res) {
     let nextCursor = null;
     let pageCount = 0;
 
-    while (hasMore && pageCount < 10) { // up to 500 rows
+    while (hasMore && pageCount < 10) { // safety: up to 1,000 rows
       pageCount++;
       const requestBody = { ...baseRequestBody };
       if (nextCursor) requestBody.start_cursor = nextCursor;
+
+      // Per-page timeout to avoid hanging
+      const controller = new AbortController();
+      const to = setTimeout(() => controller.abort(), 25_000);
 
       const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
         method: 'POST',
@@ -93,11 +88,12 @@ module.exports = async function handler(req, res) {
           'Notion-Version': '2022-06-28',
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(requestBody)
-      });
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+      }).finally(() => clearTimeout(to));
 
       if (!response.ok) {
-        const errorText = await response.text();
+        const errorText = await response.text().catch(() => '');
         return res.status(500).json({
           error: `Notion API error on page ${pageCount}: ${response.status}`,
           details: errorText
@@ -110,8 +106,10 @@ module.exports = async function handler(req, res) {
       nextCursor = pageData.next_cursor || null;
     }
 
-    // --- Resolve first related page title for relation props (optional)
-    if (allResults.length > 0) {
+    // --- FAST MODE: skip relation resolution by default (use rollups instead)
+    const SHOULD_RESOLVE_RELATIONS = resolveRelations === '1';
+    if (SHOULD_RESOLVE_RELATIONS && allResults.length > 0) {
+      console.log('Relation resolution enabled via ?resolveRelations=1 (slow)');
       let count = 0;
       for (let i = 0; i < allResults.length; i++) {
         const record = allResults[i];
@@ -120,12 +118,19 @@ module.exports = async function handler(req, res) {
             try {
               count++;
               const firstRelation = property.relation[0];
+
+              // per-request timeout as well
+              const controller = new AbortController();
+              const to = setTimeout(() => controller.abort(), 10_000);
+
               const pageResp = await fetch(`https://api.notion.com/v1/pages/${firstRelation.id}`, {
                 headers: {
-                  'Authorization': `Bearer ${NOTION_TOKEN}`,
+                  'Authorization': `Bearer ${NOTION_TOKEN}',
                   'Notion-Version': '2022-06-28'
-                }
-              });
+                },
+                signal: controller.signal
+              }).finally(() => clearTimeout(to));
+
               if (pageResp.ok) {
                 const relPage = await pageResp.json();
                 const titleProp = Object.values(relPage.properties).find(p => p.type === 'title');
@@ -133,7 +138,7 @@ module.exports = async function handler(req, res) {
                   property.relation_titles = titleProp.title[0].plain_text;
                 }
               }
-              if (count % 5 === 0) await new Promise(r => setTimeout(r, 100));
+              if (count % 5 === 0) await new Promise(r => setTimeout(r, 50));
             } catch (e) {
               console.error(`Relation fetch error for ${key}:`, e?.message || e);
             }
@@ -144,6 +149,19 @@ module.exports = async function handler(req, res) {
 
     const columnConfig = getUniversalColumnConfig();
 
+    // --- Build metadata (robust currency detection)
+    const incomeTypes = new Set();
+    const currencies  = new Set();
+    for (const r of allResults) {
+      const it = r.properties?.['Income Type']?.select?.name;
+      if (it) incomeTypes.add(it);
+
+      const c =
+        r.properties?.['Currency (Inv/Stmt)']?.select?.name ||
+        r.properties?.['Currency']?.select?.name;
+      if (c) currencies.add(c);
+    }
+
     return res.status(200).json({
       results: allResults,
       authorizedClient: clientName,
@@ -153,11 +171,12 @@ module.exports = async function handler(req, res) {
       columnHeaders: columnConfig.columnHeaders,
       debug: {
         recordCount: allResults.length,
+        resolvedRelations: SHOULD_RESOLVE_RELATIONS,
         timestamp: new Date().toISOString()
       },
       metadata: {
-        incomeTypes: [...new Set(allResults.map(r => r.properties?.['Income Type']?.select?.name).filter(Boolean))],
-        currencies:  [...new Set(allResults.map(r => r.properties?.['Currency']?.select?.name).filter(Boolean))]
+        incomeTypes: [...incomeTypes],
+        currencies:  [...currencies]
       }
     });
 
@@ -174,21 +193,38 @@ module.exports = async function handler(req, res) {
 
 /* ----------------- Helpers ----------------- */
 
-// Column config stays the same as your version
+// Column config: include optional rollup display columns if you add them in Notion.
 function getUniversalColumnConfig() {
   return {
     columns: [
-      'Invoice date','Inv #','Vendor1','Description','Income Type',
-      'Net','Gross','Currency','Paid in date','Amount Received',
-      'Currency (receipt)','Adjustments','Net Commissionable',
+      'Invoice date','Inv #',
+      'Vendor1',
+      'Description','Income Type',
+      'Net','Gross',
+      'Currency (Inv/Stmt)','Currency',
+      'Paid in date','Amount Received',
+      'Currency (receipt)',
+      'Adjustments','Net Commissionable',
       'Commission %','Mgmt Commission','Mgmt Inv #'
     ],
     columnHeaders: {
-      'Invoice date':'Date (Inv/Stmt)','Inv #':'Invoice #','Vendor1':'Vendor','Description':'Description',
-      'Income Type':'Income Type','Net':'Net Amount','Gross':'Gross Amount','Currency':'Currency (Inv/Stmt)',
-      'Paid in date':'Paid In Date','Amount Received':'Amount Received','Currency (receipt)':'Currency (Received)',
-      'Adjustments':'Adjustments','Net Commissionable':'Net Commissionable','Commission %':'Commission %',
-      'Mgmt Commission':'Mgmt Commission','Mgmt Inv #':'Mgmt Inv #'
+      'Invoice date':'Date (Inv/Stmt)',
+      'Inv #':'Invoice #',
+      'Vendor1':'Vendor',
+      'Description':'Description',
+      'Income Type':'Income Type',
+      'Net':'Net Amount',
+      'Gross':'Gross Amount',
+      'Currency (Inv/Stmt)':'Currency (Inv/Stmt)',
+      'Currency':'Currency (Inv/Stmt)',
+      'Paid in date':'Paid In Date',
+      'Amount Received':'Amount Received',
+      'Currency (receipt)':'Currency (Received)',
+      'Adjustments':'Adjustments',
+      'Net Commissionable':'Net Commissionable',
+      'Commission %':'Commission %',
+      'Mgmt Commission':'Mgmt Commission',
+      'Mgmt Inv #':'Mgmt Inv #'
     }
   };
 }
@@ -215,32 +251,30 @@ function verifySecureKey(userEmail, secureKey, timestamp) {
   try {
     const lower = (userEmail || '').toLowerCase();
 
-    // Helper to build keys in one place
     const makeKey = (prefix, seed) =>
       prefix + Buffer.from(seed).toString('base64').replace(/[^a-zA-Z0-9]/g, '');
 
-    // For each client, list the accepted *seeds* (first is your new scheme; rest are legacy).
+    // Accepted keys per client (first = current, others = legacy)
     const CLIENT_KEY_DEFS = {
-      'King Ed':               { prefix: 'ke-', seeds: ['king-ed-2025'] },
-      'Linden Jay':           { prefix: 'lj-', seeds: ['linden-jay-2025', 'client-a-2024'] },
-      'Will Vaughan':         { prefix: 'wv-', seeds: ['will-vaughan-2025', 'client-a-2024'] },
-      'Tiggs':                { prefix: 'nf-', seeds: ['tiggs-2025', 'client-a-2024'] },
-      'Kieran "KES" Beardmore': { prefix: 'kb-', seeds: ['kieran-beardmore-2025', 'client-b-2024'] }
+      'King Ed':                 { prefix: 'ke-', seeds: ['king-ed-2025'] },
+      'Linden Jay':              { prefix: 'lj-', seeds: ['linden-jay-2025','client-a-2024'] },
+      'Will Vaughan':            { prefix: 'wv-', seeds: ['will-vaughan-2025','client-a-2024'] },
+      'Tiggs':                   { prefix: 'nf-', seeds: ['tiggs-2025','client-a-2024'] },
+      'Kieran "KES" Beardmore':  { prefix: 'kb-', seeds: ['kieran-beardmore-2025','client-b-2024'] }
     };
 
-    // Build a map of client -> Set(keys)
     const clientToKeys = {};
     for (const [client, def] of Object.entries(CLIENT_KEY_DEFS)) {
       clientToKeys[client] = new Set(def.seeds.map(seed => makeKey(def.prefix, seed)));
     }
 
-    // Reverse lookup: which client (if any) does this secureKey belong to?
+    // Which client does this secureKey belong to?
     let clientFromKey = null;
     for (const [client, keys] of Object.entries(clientToKeys)) {
       if (keys.has(secureKey)) { clientFromKey = client; break; }
     }
 
-    // Validate timestamp window
+    // Timestamp window
     const now = Math.floor(Date.now() / 1000);
     const requestTime = parseInt(timestamp, 10);
     const drift = now - requestTime;
@@ -248,14 +282,12 @@ function verifySecureKey(userEmail, secureKey, timestamp) {
       return { ok: false, isAdmin: false, clientFromKey: null };
     }
 
-    // Admin can use any valid client page key
     const isAdmin = lower === 'nick@sayshey.com';
     if (isAdmin) {
-      const ok = !!clientFromKey;
+      const ok = !!clientFromKey; // admin must still use a valid client page key
       return { ok, isAdmin: true, clientFromKey: ok ? clientFromKey : null };
     }
 
-    // Non-admin: secureKey must match the key for their mapped client
     const userClient = getClientForUser(lower);
     if (!userClient) return { ok: false, isAdmin: false, clientFromKey: null };
 
