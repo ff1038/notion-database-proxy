@@ -16,11 +16,11 @@
   .dashboard-header{
     display:flex;align-items:center;justify-content:space-between;
     background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-    color:#fff;padding:18px 22px;margin:0 0 var(--gap) 0;border-radius:0;
+    color:#fff;padding:5px 5px;margin:0 0 var(--gap) 0;border-radius:0;
   }
   .header-left h1{margin:0;font-size:22px;font-weight:600}
   .header-left p{margin:4px 0 0;font-size:13px;opacity:.9}
-  .secure-chip{display:flex;gap:10px;align-items:center;white-space:nowrap;padding:8px 12px;border-radius:10px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);font-size:13px;}
+  .secure-chip{display:flex;gap:2px;align-items:center;white-space:nowrap;padding:2px 4px;border-radius:5px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);font-size:13px;}
 
   .page{padding:20px}
 
@@ -100,10 +100,6 @@
 <body>
   <!-- Header -->
   <div class="dashboard-header">
-    <div class="header-left">
-      <h1 id="clientDisplay">Client Dashboard</h1>
-      <p>Secure data view</p>
-    </div>
     <div class="secure-chip">
       <span>🔒 Secure access</span><span>•</span>
       <span>User: <span id="userEmail">Loading...</span></span>
@@ -151,8 +147,8 @@
 
     <!-- Tabs -->
     <div class="tabs">
-      <button class="tab-btn" id="tabTable"  onclick="switchTab('table')">Table</button>
-      <button class="tab-btn active" id="tabCharts" onclick="switchTab('charts')">Charts</button>
+      <button class="tab-btn active" id="tabTable"  onclick="switchTab('table')">Table</button>
+      <button class="tab-btn" id="tabCharts" onclick="switchTab('charts')">Charts</button>
     </div>
 
     <!-- Charts -->
