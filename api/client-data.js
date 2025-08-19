@@ -3,78 +3,88 @@
 module.exports = async function handler(req, res) {
   console.log('=== API HANDLER START ===');
 
+  // CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
-  }
+  if (req.method === 'OPTIONS') return res.status(200).end();
 
   try {
-    console.log('1. Checking environment variables...');
     const NOTION_TOKEN = process.env.NOTION_TOKEN;
     const DATABASE_ID  = process.env.NOTION_DATABASE_ID;
-
-    console.log('NOTION_TOKEN exists:', !!NOTION_TOKEN);
-    console.log('DATABASE_ID exists:', !!DATABASE_ID);
-
     if (!NOTION_TOKEN || !DATABASE_ID) {
-      console.log('Missing environment variables');
       return res.status(500).json({ error: 'Server configuration error - missing environment variables' });
     }
 
-    console.log('2. Checking request parameters...');
-    const { userEmail, secureKey, timestamp } = req.query || {};
-    console.log('userEmail:', userEmail);
-    console.log('secureKey exists:', !!secureKey);
-    console.log('timestamp:', timestamp);
-
+    // --- Request params
+    const { userEmail, secureKey, timestamp, client: clientParam } = req.query || {};
     if (!userEmail || !secureKey || !timestamp) {
-      console.log('Missing authentication parameters');
       return res.status(401).json({ error: 'Missing authentication parameters' });
     }
 
-    console.log('3. Verifying secure key...');
-    if (!verifySecureKey(userEmail, secureKey, timestamp)) {
-      console.log('Invalid secure key');
+    // --- Verify key (returns { ok, isAdmin, clientFromKey })
+    const { ok, isAdmin, clientFromKey } = verifySecureKey(userEmail, secureKey, timestamp);
+    if (!ok) {
       return res.status(401).json({ error: 'Invalid access credentials' });
     }
 
-    console.log('4. Getting client for user...');
-    const clientName = getClientForUser(userEmail);
-    console.log('Client name:', clientName);
+    // --- Resolve which client’s data to show
+    // Priority:
+    //  1) explicit ?client=... (allowed for admin only; for non-admin must match their mapping)
+    //  2) infer from secureKey (works for admin and non-admin if mapping exists)
+    //  3) fallback to user mapping (non-admin only)
+    let clientName = null;
 
-    if (!clientName) {
-      console.log('No client found for user');
-      return res.status(403).json({ error: 'No client access for user: ' + userEmail });
+    const userMappedClient = getClientForUser(userEmail); // null for admin; defined for members
+    const clean = s => (s || '').trim();
+
+    if (clean(clientParam)) {
+      if (isAdmin) {
+        clientName = clean(clientParam);
+      } else {
+        // non-admin may only request their own client
+        if (clean(clientParam) !== userMappedClient) {
+          return res.status(403).json({ error: 'Client access denied for user' });
+        }
+        clientName = userMappedClient;
+      }
+    } else if (clientFromKey) {
+      // Use client inferred from the secureKey mapping (works on per-page keys)
+      clientName = clientFromKey;
+      if (!isAdmin && userMappedClient && clientName !== userMappedClient) {
+        return res.status(403).json({ error: 'Client access denied for user' });
+      }
+    } else {
+      // last resort: non-admin’s mapping
+      if (!isAdmin) {
+        if (!userMappedClient) return res.status(403).json({ error: 'No client access for user' });
+        clientName = userMappedClient;
+      } else {
+        // Admin without client hint: this page didn’t pass a client and key didn’t identify one
+        return res.status(400).json({ error: 'Admin access requires client context (add ?client=...)' });
+      }
     }
 
-    console.log('5. Making Notion API request with pagination...');
+    console.log('Resolved -> isAdmin:', isAdmin, '| clientName:', clientName);
 
-    // Base request body used for each page
+    // --- Notion query with pagination (always filtered to clientName)
     const baseRequestBody = {
-      page_size: 20,
+      page_size: 50,
       filter: {
         property: 'Client',
         select: { equals: clientName }
       }
     };
 
-    // ---- Pagination loop (restored) ----
     let allResults = [];
     let hasMore = true;
     let nextCursor = null;
     let pageCount = 0;
 
-    while (hasMore && pageCount < 3) { // safety limit: 20 pages => up to 1000 rows
+    while (hasMore && pageCount < 10) { // up to 500 rows
       pageCount++;
       const requestBody = { ...baseRequestBody };
       if (nextCursor) requestBody.start_cursor = nextCursor;
-
-      console.log(`Fetching page ${pageCount}...`);
-      console.log(`Page ${pageCount} request body:`, JSON.stringify(requestBody, null, 2));
 
       const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
         method: 'POST',
@@ -86,11 +96,8 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify(requestBody)
       });
 
-      console.log(`Page ${pageCount} response status:`, response.status);
-
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`Notion API error on page ${pageCount}:`, errorText);
         return res.status(500).json({
           error: `Notion API error on page ${pageCount}: ${response.status}`,
           details: errorText
@@ -98,21 +105,12 @@ module.exports = async function handler(req, res) {
       }
 
       const pageData = await response.json();
-      const pageResults = pageData.results || [];
-      console.log(`Page ${pageCount} retrieved:`, pageResults.length, 'records');
-
-      allResults = allResults.concat(pageResults);
+      allResults = allResults.concat(pageData.results || []);
       hasMore = !!pageData.has_more;
       nextCursor = pageData.next_cursor || null;
-
-      console.log(`Total records so far: ${allResults.length} | has_more: ${hasMore} | next_cursor: ${nextCursor}`);
     }
-    // ---- End pagination loop ----
 
-    console.log('6. Total records retrieved:', allResults.length);
-
-    // Optional: resolve titles for relation properties (first related page only)
-    console.log('7. Processing relation fields...');
+    // --- Resolve first related page title for relation props (optional)
     if (allResults.length > 0) {
       let count = 0;
       for (let i = 0; i < allResults.length; i++) {
@@ -142,17 +140,15 @@ module.exports = async function handler(req, res) {
           }
         }
       }
-      console.log('Processed relation fields');
     }
 
-    console.log('8. Applying column configuration...');
     const columnConfig = getUniversalColumnConfig();
 
-    console.log('9. Sending response...');
-    res.status(200).json({
+    return res.status(200).json({
       results: allResults,
       authorizedClient: clientName,
       userEmail: userEmail,
+      isAdmin,
       columnOrder: columnConfig.columns,
       columnHeaders: columnConfig.columnHeaders,
       debug: {
@@ -165,13 +161,9 @@ module.exports = async function handler(req, res) {
       }
     });
 
-    console.log('=== API HANDLER SUCCESS ===');
   } catch (error) {
-    console.error('=== API HANDLER ERROR ===');
-    console.error('Error type:', error?.constructor?.name);
-    console.error('Error message:', error?.message);
-    console.error('Error stack:', error?.stack);
-    res.status(500).json({
+    console.error('=== API HANDLER ERROR ===', error);
+    return res.status(500).json({
       error: `Server error: ${error?.message || 'unknown'}`,
       type: error?.constructor?.name,
       stack: error?.stack,
@@ -180,52 +172,30 @@ module.exports = async function handler(req, res) {
   }
 };
 
-/* ----------------- Helpers (NO exports here) ----------------- */
+/* ----------------- Helpers ----------------- */
 
+// Column config stays the same as your version
 function getUniversalColumnConfig() {
   return {
     columns: [
-      'Invoice date',
-      'Inv #',
-      'Vendor1',
-      'Description',
-      'Income Type',
-      'Net',
-      'Gross',
-      'Currency',
-      'Paid in date',
-      'Amount Received',
-      'Currency (receipt)',
-      'Adjustments',
-      'Net Commissionable',
-      'Commission %',
-      'Mgmt Commission',
-      'Mgmt Inv #'
+      'Invoice date','Inv #','Vendor1','Description','Income Type',
+      'Net','Gross','Currency','Paid in date','Amount Received',
+      'Currency (receipt)','Adjustments','Net Commissionable',
+      'Commission %','Mgmt Commission','Mgmt Inv #'
     ],
     columnHeaders: {
-      'Invoice date': 'Date (Inv/Stmt)',
-      'Inv #': 'Invoice #',
-      'Vendor1': 'Vendor',
-      'Description': 'Description',
-      'Income Type': 'Income Type',
-      'Net': 'Net Amount',
-      'Gross': 'Gross Amount',
-      'Currency': 'Currency (Inv/Stmt)',
-      'Paid in date': 'Paid In Date',
-      'Amount Received': 'Amount Received',
-      'Currency (receipt)': 'Currency (Received)',
-      'Adjustments': 'Adjustments',
-      'Net Commissionable': 'Net Commissionable',
-      'Commission %': 'Commission %',
-      'Mgmt Commission': 'Mgmt Commission',
-      'Mgmt Inv #': 'Mgmt Inv #'
+      'Invoice date':'Date (Inv/Stmt)','Inv #':'Invoice #','Vendor1':'Vendor','Description':'Description',
+      'Income Type':'Income Type','Net':'Net Amount','Gross':'Gross Amount','Currency':'Currency (Inv/Stmt)',
+      'Paid in date':'Paid In Date','Amount Received':'Amount Received','Currency (receipt)':'Currency (Received)',
+      'Adjustments':'Adjustments','Net Commissionable':'Net Commissionable','Commission %':'Commission %',
+      'Mgmt Commission':'Mgmt Commission','Mgmt Inv #':'Mgmt Inv #'
     }
   };
 }
 
+// Non-admin fixed mapping
 function getClientForUser(userEmail) {
   const userClientMap = {
-    'nick@sayshey.com': 'King Ed',
     'edcarlile@me.com': 'King Ed',
     'lindenjaymusic@gmail.com': 'Linden Jay',
     'willvrocks@gmail.com': 'Will Vaughan',
@@ -235,29 +205,61 @@ function getClientForUser(userEmail) {
   return userClientMap[(userEmail || '').toLowerCase()] || null;
 }
 
+/**
+ * verifySecureKey:
+ *  - Non-admin: secureKey must match *their* expected key.
+ *  - Admin (nick@sayshey.com): secureKey may match *any* known client key.
+ * Returns { ok, isAdmin, clientFromKey } where clientFromKey is the client that the key represents.
+ */
 function verifySecureKey(userEmail, secureKey, timestamp) {
   try {
-    const userSecureKeys = {
-      'nick@sayshey.com': 'ke-' + Buffer.from('king-ed-2025').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
-      'edcarlile@me.com': 'ke-' + Buffer.from('king-ed-2025').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
-      'lindenjaymusic@gmail.com': 'lj-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
-      'willvrocks@gmail.com': 'wv-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
-      'talktotiggs@gmail.com': 'nf-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
-      'mrkieranbeardmore@gmail.com': 'kb-' + Buffer.from('client-b-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, '')
+    const lower = (userEmail || '').toLowerCase();
+
+    // Map each client to the exact key the Wix page generates for that client
+    // (prefixes mirror your earlier scheme)
+    const clientKeyMap = {
+      'King Ed':               'ke-' + Buffer.from('king-ed-2025').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'Linden Jay':            'lj-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'Will Vaughan':          'wv-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'Tiggs':                 'nf-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'Kieran "KES" Beardmore':'kb-' + Buffer.from('client-b-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, '')
     };
 
-    const expectedKey = userSecureKeys[(userEmail || '').toLowerCase()];
-    if (!expectedKey || secureKey !== expectedKey) return false;
+    // Map user → client (non-admin)
+    const userClient = getClientForUser(lower);
 
+    // Admin?
+    const isAdmin = lower === 'nick@sayshey.com';
+
+    // Validate timestamp
     const now = Math.floor(Date.now() / 1000);
     const requestTime = parseInt(timestamp, 10);
-    const timeDiff = now - requestTime;
-    // allow up to 1 hour drift, and not more than 5 min in the future
-    if (Number.isNaN(requestTime) || timeDiff > 3600 || timeDiff < -300) return false;
+    const drift = now - requestTime;
+    if (Number.isNaN(requestTime) || drift > 3600 || drift < -300) {
+      return { ok: false, isAdmin: false, clientFromKey: null };
+    }
 
-    return true;
+    // Reverse lookup: which client does this secureKey belong to?
+    let clientFromKey = null;
+    for (const [clientName, key] of Object.entries(clientKeyMap)) {
+      if (key === secureKey) { clientFromKey = clientName; break; }
+    }
+
+    if (isAdmin) {
+      // Admin key must be one of the known *client page* keys
+      // (so the admin can load any client page, but not some random key)
+      const ok = !!clientFromKey;
+      return { ok, isAdmin: true, clientFromKey: ok ? clientFromKey : null };
+    }
+
+    // Non-admin: secureKey must match the key of their mapped client
+    if (!userClient) return { ok: false, isAdmin: false, clientFromKey: null };
+    const expectedKey = clientKeyMap[userClient];
+    const ok = (secureKey === expectedKey);
+    return { ok, isAdmin: false, clientFromKey: ok ? userClient : null };
+
   } catch (err) {
     console.error('Secure key verification error:', err);
-    return false;
+    return { ok: false, isAdmin: false, clientFromKey: null };
   }
 }
