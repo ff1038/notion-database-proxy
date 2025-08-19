@@ -359,7 +359,7 @@ async function loadData(userEmail, secureKey, timestamp){
     );
 
     applyFilters();   // builds table, charts, summaries
-    switchTab('charts');
+    switchTab('table');
   }catch(e){ console.error(e); showError(`Access Denied: ${e.message}`); }
 }
 
