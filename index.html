@@ -1,1353 +1,947 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client Dashboard</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f8f9fa;
-        }
-        
-.dashboard-header.merged{
-  display:flex; align-items:center; justify-content:space-between;
-  background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-  color:#fff; padding:18px 22px;
-  border-radius: 0;           /* was 12px */
-  margin: 0 0 16px 0;         /* remove side margins */
-  width: 100%;
-}
-.page {
-  padding: 20px;              /* restores the nice 20px gutters */
-}
-.header-left .client-name{ margin:0; font-size:22px; font-weight:600; }
-.header-left .dashboard-subtitle{ margin:4px 0 0; font-size:13px; opacity:.9; }
-.secure-chip{
-  display:flex; align-items:center; gap:10px;
-  background: rgba(255,255,255,.12);
-  border:1px solid rgba(255,255,255,.25);
-  padding:8px 12px; border-radius:10px; font-size:13px; white-space:nowrap;
-}
-.secure-chip .divider{ opacity:.6 }
-@media (max-width:768px){
-  .dashboard-header.merged{flex-direction:column; align-items:flex-start; gap:10px;}
-  .secure-chip{width:100%; justify-content:space-between; flex-wrap:wrap;}
-}
-        
-        .client-name {
-            font-size: 28px;
-            font-weight: 600;
-            margin: 0;
-        }
-        
-        .dashboard-subtitle {
-            font-size: 15px;
-            opacity: 0.9;
-            margin: 10px 0 0 0;
-        }
-        
-        .security-indicator {
-            background: #d4edda;
-            color: #155724;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border: 1px solid #c3e6cb;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .summary-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-            margin-bottom: 20px;
-        }
-        
-        .summary-box {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border-left: 4px solid #667eea;
-        }
-        
-        .summary-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #6c757d;
-            margin-bottom: 10px;
-        }
-        
-        .summary-value {
-            font-size: 24px;
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 5px;
-        }
-        
-        .summary-breakdown {
-            font-size: 12px;
-            color: #6c757d;
-            line-height: 1.4;
-        }
-        
-        .table-container {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            overflow: hidden;
-        }
-        
-        .table-header.compact {
-       background:#f8f9fa; padding:12px 16px; border-bottom:1px solid #e9ecef;
-    display:flex; gap:12px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;
-}
-.controls-left{ display:flex; flex:1 1 auto; min-width:320px; }
-.controls-right{ display:flex; align-items:center; gap:10px; }
-.filter-buttons.condensed{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
-.filter-btn{ padding:4px 10px; font-size:12px; }
-.dropdown-filter{ padding:5px 10px; font-size:12px; min-width:120px; }
-.search-box{ width:260px; }
-@media (max-width:900px){
-  .controls-right{ width:100%; justify-content:space-between; }
-  .search-box{ flex:1; min-width:180px; }
-}
-        
-        .table-title {
-            font-size: 20px;
-            font-weight: 600;
-            margin: 0;
-            color: #333;
-        }
-        
-        .search-container {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            flex-wrap: wrap;
-        }
-        
-        .filter-buttons {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin-bottom: 15px;
-        }
-        
-        .filter-btn {
-            padding: 6px 12px;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            background: white;
-            color: #495057;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.2s;
-        }
-        
-        .filter-btn:hover {
-            background: #f8f9fa;
-            border-color: #adb5bd;
-        }
-        
-        .filter-btn.active {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-        
-        .unpaid-filter {
-            background: #dc3545;
-            border-color: #dc3545;
-            color: white;
-        }
-        
-        .unpaid-filter:hover {
-            background: #c82333;
-        }
-        
-        .void-filter {
-            background: #6c757d;
-            border-color: #6c757d;
-            color: white;
-        }
-        
-        .void-filter:hover {
-            background: #5a6268;
-        }
-        
-        .dropdown-filter {
-            padding: 6px 12px;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            background: white;
-            color: #495057;
-            font-size: 12px;
-            min-width: 120px;
-        }
-        
-        .dropdown-filter:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .pagination-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 20px;
-            border-top: 1px solid #e9ecef;
-            background: #f8f9fa;
-        }
-        
-        .pagination-info {
-            color: #6c757d;
-            font-size: 14px;
-        }
-        
-        .pagination-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        .pagination-btn {
-            padding: 8px 12px;
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            background: white;
-            color: #495057;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-        
-        .pagination-btn:hover:not(:disabled) {
-            background: #f8f9fa;
-            border-color: #adb5bd;
-        }
-        
-        .pagination-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .pagination-btn.active {
-            background: #667eea;
-            color: white;
-            border-color: #667eea;
-        }
-        
-        .search-box {
-            padding: 8px 12px;
-            border: 2px solid #dee2e6;
-            border-radius: 6px;
-            font-size: 14px;
-            width: 250px;
-            transition: border-color 0.3s;
-        }
-        
-        .search-box:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .record-count {
-            color: #6c757d;
-            font-size: 14px;
-            white-space: nowrap;
-        }
-        
-        .table-wrapper {
-            overflow-x: auto;
-            max-height: 600px;
-            overflow-y: auto;
-        }
-        
-        .data-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-        
-        .data-table th {
-            background: #f8f9fa;
-            padding: 15px 12px;
-            text-align: left;
-            font-weight: 600;
-            color: #495057;
-            border-bottom: 2px solid #dee2e6;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            cursor: pointer;
-            user-select: none;
-            transition: background-color 0.2s;
-        }
-        
-        .data-table th:hover {
-            background: #e9ecef;
-        }
-        
-        .data-table th .sort-indicator {
-            display: inline-block;
-            margin-left: 5px;
-            opacity: 0.5;
-        }
-        
-        .data-table th.sorted-asc .sort-indicator::after {
-            content: '▲';
-            opacity: 1;
-        }
-        
-        .data-table th.sorted-desc .sort-indicator::after {
-            content: '▼';
-            opacity: 1;
-        }
-        
-        .data-table th .sort-indicator::after {
-            content: '↕';
-        }
-        
-        .data-table td {
-            padding: 12px;
-            border-bottom: 1px solid #e9ecef;
-            vertical-align: top;
-        }
-        
-        .data-table tr:hover {
-            background: #f8f9fa;
-        }
-        
-        .data-table tr.hidden {
-            display: none;
-        }
-        
-        .void-row {
-            text-decoration: line-through;
-            opacity: 0.6;
-            background: #f8f9fa !important;
-        }
-        
-        /* Notion-style tag colors */
-        .tag {
-            padding: 3px 8px;
-            border-radius: 3px;
-            font-size: 11px;
-            font-weight: 500;
-            display: inline-block;
-            margin: 2px;
-        }
-        
-        .tag.default { background: #e9ecef; color: #495057; }
-        .tag.gray { background: #e9ecef; color: #495057; }
-        .tag.brown { background: #d7ccc8; color: #5d4037; }
-        .tag.orange { background: #ffe0b2; color: #ef6c00; }
-        .tag.yellow { background: #fff9c4; color: #f57f17; }
-        .tag.green { background: #c8e6c9; color: #2e7d32; }
-        .tag.blue { background: #bbdefb; color: #1565c0; }
-        .tag.purple { background: #d1c4e9; color: #512da8; }
-        .tag.pink { background: #f8bbd9; color: #c2185b; }
-        .tag.red { background: #ffcdd2; color: #d32f2f; }
-        .tag.royalties { background: #e3f2fd; color: #1976d2; }
-        .tag.publishing { background: #e8f5e8; color: #2e7d32; }
-        .tag.master { background: #fff3e0; color: #f57c00; }
-        
-        .status {
-            padding: 6px 12px;
-            border-radius: 16px;
-            font-size: 12px;
-            font-weight: 500;
-            text-align: center;
-        }
-        
-        .status.not-started { background: #f8f9fa; color: #6c757d; }
-        .status.in-progress { background: #fff3cd; color: #856404; }
-        .status.completed { background: #d4edda; color: #155724; }
-        .status.on-hold { background: #f8d7da; color: #721c24; }
-        
-        .loading {
-            text-align: center;
-            padding: 60px;
-            color: #6c757d;
-            font-size: 16px;
-        }
-        
-        .error {
-            text-align: center;
-            padding: 40px;
-            color: #721c24;
-            background: #f8d7da;
-            border: 1px solid #f5c6cb;
-            border-radius: 8px;
-            margin: 20px;
-        }
-        
-        .no-data {
-            text-align: center;
-            padding: 60px;
-            color: #6c757d;
-        }
-        
-        .export-btn {
-              background-color: #4CAF50;
-              color: white;
-              border: none;
-              padding: 8px 14px;
-              margin-left: 10px;
-              border-radius: 6px;
-              cursor: pointer;
-              font-size: 14px;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Client Dashboard</title>
+  <style>
+    html, body { overflow-x: hidden; } /* prevent sideways scroll */
 
-        .export-btn:hover {
-              background-color: #45a049;
-        }
-        
-        .refresh-btn {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background: #667eea;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 60px;
-            height: 60px;
-            cursor: pointer;
-            box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
-            font-size: 20px;
-            transition: all 0.3s;
-        }
-        
-        .refresh-btn:hover {
-            background: #5a6fd8;
-            transform: scale(1.1);
-        }
-        
-        @media (max-width: 768px) {
-            .table-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .search-container {
-                justify-content: space-between;
-                width: 100%;
-            }
-            
-            .search-box {
-                width: 200px;
-            }
-        }
-    </style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f8f9fa;
+    }
+
+    /* Header */
+    .dashboard-header.merged{
+      display:flex; align-items:center; justify-content:space-between;
+      background: linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+      color:#fff; padding:18px max(22px, env(safe-area-inset-right) + 20px) 18px 22px;
+      border-radius: 0;
+      margin: 0 0 16px 0;
+      width: 100%;
+      overflow:hidden;
+    }
+    .page { padding: 20px; }
+    .header-left .client-name{ margin:0; font-size:22px; font-weight:600; }
+    .header-left .dashboard-subtitle{ margin:4px 0 0; font-size:13px; opacity:.9; }
+    .secure-chip{
+      display:flex; align-items:center; gap:10px;
+      background: rgba(255,255,255,.12);
+      border:1px solid rgba(255,255,255,.25);
+      padding:8px 12px; border-radius:10px; font-size:13px; white-space:nowrap;
+      margin-right: 12px;            /* nudge inward from the right edge */
+    }
+    .secure-chip .divider{ opacity:.6 }
+    @media (max-width:768px){
+      .dashboard-header.merged{flex-direction:column; align-items:flex-start; gap:10px;}
+      .secure-chip{width:100%; justify-content:space-between; flex-wrap:wrap; margin-right:0;}
+    }
+
+    .client-name { font-size: 28px; font-weight: 600; margin: 0; }
+    .dashboard-subtitle { font-size: 15px; opacity: 0.9; margin: 10px 0 0 0; }
+
+    /* Summary */
+    .summary-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .summary-box {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      border-left: 4px solid #667eea;
+    }
+    .summary-title { font-size: 14px; font-weight: 600; color: #6c757d; margin-bottom: 10px; }
+    .summary-value { font-size: 24px; font-weight: 700; color: #333; margin-bottom: 0; }
+    .summary-breakdown { display: none !important; } /* hide the grey duplicates */
+
+    /* Table container */
+    .table-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .table-header.compact {
+      background:#f8f9fa; padding:12px 16px; border-bottom:1px solid #e9ecef;
+      display:flex; gap:12px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;
+    }
+    .controls-left{ display:flex; flex:1 1 auto; min-width:320px; }
+    .controls-right{ display:flex; align-items:center; gap:10px; }
+    .filter-buttons.condensed{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .filter-btn{ padding:4px 10px; font-size:12px; }
+    .search-box{ width:260px; }
+    @media (max-width:900px){
+      .controls-right{ width:100%; justify-content:space-between; }
+      .search-box{ flex:1; min-width:180px; }
+    }
+
+    .table-title { font-size: 20px; font-weight: 600; margin: 0; color: #333; }
+    .search-container { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+
+    .filter-buttons { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 15px; }
+    .filter-btn {
+      padding: 6px 12px; border: 1px solid #dee2e6; border-radius: 4px; background: white;
+      color: #495057; cursor: pointer; font-size: 12px; transition: all 0.2s;
+    }
+    .filter-btn:hover { background: #f8f9fa; border-color: #adb5bd; }
+    .filter-btn.active { background: #667eea; color: white; border-color: #667eea; }
+    .unpaid-filter { background: #dc3545; border-color: #dc3545; color: white; }
+    .unpaid-filter:hover { background: #c82333; }
+    .void-filter { background: #6c757d; border-color: #6c757d; color: white; }
+    .void-filter:hover { background: #5a6268; }
+
+    /* Multi-select menus */
+    .multi-select { position: relative; display: inline-block; }
+    .ms-trigger{
+      padding:6px 12px;border:1px solid #dee2e6;border-radius:4px;background:#fff;color:#495057;
+      font-size:12px; min-width:160px; cursor:pointer; display:flex; align-items:center; gap:6px;
+    }
+    .ms-menu{
+      position:absolute; top:110%; left:0; z-index:1000; background:#fff; border:1px solid #dee2e6;
+      border-radius:6px; box-shadow:0 6px 20px rgba(0,0,0,.08); padding:8px; width:240px; max-height:280px; overflow:auto;
+      display:none;
+    }
+    .ms-item{ display:flex; align-items:center; gap:8px; padding:6px 4px; font-size:12px; }
+    .ms-actions{ display:flex; justify-content:space-between; gap:8px; margin-top:6px; }
+    .ms-actions button{
+      padding:6px 10px; font-size:12px; border:1px solid #dee2e6; border-radius:4px; background:#fff; cursor:pointer;
+    }
+    .ms-open .ms-menu{ display:block; }
+
+    /* Pagination & table */
+    .pagination-container { display:flex; justify-content:space-between; align-items:center; padding:15px 20px; border-top:1px solid #e9ecef; background:#f8f9fa; }
+    .pagination-info { color:#6c757d; font-size:14px; }
+    .pagination-controls { display:flex; gap:10px; align-items:center; }
+    .pagination-btn { padding:8px 12px; border:1px solid #dee2e6; border-radius:4px; background:white; color:#495057; cursor:pointer; font-size:14px; transition:all .2s; }
+    .pagination-btn:hover:not(:disabled){ background:#f8f9fa; border-color:#adb5bd; }
+    .pagination-btn:disabled{ opacity:.5; cursor:not-allowed; }
+    .pagination-btn.active{ background:#667eea; color:#fff; border-color:#667eea; }
+
+    .search-box {
+      padding: 8px 12px; border: 2px solid #dee2e6; border-radius: 6px; font-size: 14px; transition: border-color 0.3s;
+    }
+    .search-box:focus { outline: none; border-color: #667eea; }
+    .record-count { color:#6c757d; font-size:14px; white-space:nowrap; }
+
+    .table-wrapper { overflow-x: auto; max-height: 600px; overflow-y: auto; }
+
+    .data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .data-table th {
+      background:#f8f9fa; padding:15px 12px; text-align:left; font-weight:600; color:#495057;
+      border-bottom:2px solid #dee2e6; position:sticky; top:0; z-index: 10; user-select: none;
+      transition: background-color 0.2s; cursor: pointer;
+    }
+    .data-table th:hover { background:#e9ecef; }
+    .data-table th .sort-indicator{ display:inline-block; margin-left:5px; opacity:.5; }
+    .data-table th.sorted-asc .sort-indicator::after{ content:'▲'; opacity:1; }
+    .data-table th.sorted-desc .sort-indicator::after{ content:'▼'; opacity:1; }
+    .data-table th .sort-indicator::after{ content:'↕'; }
+    .data-table td { padding: 12px; border-bottom: 1px solid #e9ecef; vertical-align: top; }
+    .data-table tr:hover { background:#f8f9fa; }
+    .data-table tr.hidden { display:none; }
+    .void-row { text-decoration:line-through; opacity:.6; background:#f8f9fa !important; }
+
+    /* column resizer handle */
+    .data-table th .col-resizer{
+      position:absolute; top:0; right:0; width:8px; height:100%;
+      cursor: col-resize; user-select:none;
+    }
+    .data-table th:hover .col-resizer{ background: rgba(0,0,0,.06); }
+
+    /* tags, statuses */
+    .tag { padding:3px 8px; border-radius:3px; font-size:11px; font-weight:500; display:inline-block; margin:2px; }
+    .tag.default { background: #e9ecef; color: #495057; }
+    .tag.gray { background: #e9ecef; color: #495057; }
+    .tag.brown { background: #d7ccc8; color: #5d4037; }
+    .tag.orange { background: #ffe0b2; color: #ef6c00; }
+    .tag.yellow { background: #fff9c4; color: #f57f17; }
+    .tag.green { background: #c8e6c9; color: #2e7d32; }
+    .tag.blue { background: #bbdefb; color: #1565c0; }
+    .tag.purple { background: #d1c4e9; color: #512da8; }
+    .tag.pink { background: #f8bbd9; color: #c2185b; }
+    .tag.red { background: #ffcdd2; color: #d32f2f; }
+    .tag.royalties { background: #e3f2fd; color: #1976d2; }
+    .tag.publishing { background: #e8f5e8; color: #2e7d32; }
+    .tag.master { background: #fff3e0; color: #f57c00; }
+
+    .status { padding:6px 12px; border-radius:16px; font-size:12px; font-weight:500; text-align:center; }
+    .status.not-started { background:#f8f9fa; color:#6c757d; }
+    .status.in-progress { background:#fff3cd; color:#856404; }
+    .status.completed { background:#d4edda; color:#155724; }
+    .status.on-hold { background:#f8d7da; color:#721c24; }
+
+    .loading { text-align:center; padding:60px; color:#6c757d; font-size:16px; }
+    .error { text-align:center; padding:40px; color:#721c24; background:#f8d7da; border:1px solid #f5c6cb; border-radius:8px; margin:20px; }
+    .no-data { text-align:center; padding:60px; color:#6c757d; }
+
+    .export-btn {
+      background-color: #4CAF50; color: white; border: none; padding: 8px 14px; margin-left: 10px;
+      border-radius: 6px; cursor: pointer; font-size: 14px;
+    }
+    .export-btn:hover { background-color: #45a049; }
+
+    .refresh-btn {
+      position: fixed; bottom: 30px; right: 30px; background:#667eea; color:#fff;
+      border: none; border-radius: 50%; width: 60px; height: 60px; cursor: pointer;
+      box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4); font-size: 20px; transition: all 0.3s;
+    }
+    .refresh-btn:hover { background:#5a6fd8; transform: scale(1.1); }
+  </style>
 </head>
 <body>
-<div class="dashboard-header merged">
-  <div class="header-left">
-    <h1 class="client-name" id="clientDisplay">Client Dashboard</h1>
-    <p class="dashboard-subtitle">Secure data view</p>
+  <div class="dashboard-header merged">
+    <div class="header-left">
+      <h1 class="client-name" id="clientDisplay">Client Dashboard</h1>
+      <p class="dashboard-subtitle">Secure data view</p>
+    </div>
+    <div class="header-right secure-chip">
+      <span>🔒 Secure access</span>
+      <span class="divider">•</span>
+      <span>User: <span id="userEmail">Loading...</span></span>
+    </div>
   </div>
-  <div class="header-right secure-chip">
-    <span>🔒 Secure access</span>
-    <span class="divider">•</span>
-    <span>User: <span id="userEmail">Loading...</span></span>
-  </div>
-</div>
 
-<div class="page">
+  <div class="page">
 
     <div class="summary-container" id="summaryContainer" style="display: none;">
-        <div class="summary-box">
-            <div class="summary-title">Total Income by Currency</div>
-            <div class="summary-value" id="totalIncome">Calculating...</div>
-            <div class="summary-breakdown" id="totalIncomeBreakdown"></div>
-        </div>
-        <div class="summary-box">
-            <div class="summary-title">Unpaid Income by Currency</div>
-            <div class="summary-value" id="unpaidIncome">Calculating...</div>
-            <div class="summary-breakdown" id="unpaidIncomeBreakdown"></div>
-        </div>
+      <div class="summary-box">
+        <div class="summary-title">Total Income by Currency</div>
+        <div class="summary-value" id="totalIncome">Calculating...</div>
+        <div class="summary-breakdown" id="totalIncomeBreakdown"></div>
+      </div>
+      <div class="summary-box">
+        <div class="summary-title">Unpaid Income by Currency</div>
+        <div class="summary-value" id="unpaidIncome">Calculating...</div>
+        <div class="summary-breakdown" id="unpaidIncomeBreakdown"></div>
+      </div>
     </div>
 
     <div class="table-container">
-<div class="table-header compact">
-  <div class="controls-left">
-    <div class="filter-buttons condensed">
-      <button class="filter-btn active" onclick="applyDateFilter('all', event)">All Time</button>
-      <button class="filter-btn" onclick="applyDateFilter('30', event)">Last 30 Days</button>
-      <button class="filter-btn" onclick="applyDateFilter('90', event)">Last 90 Days</button>
-      <button class="filter-btn" onclick="applyDateFilter('180', event)">Last 6 Months</button>
-      <button class="filter-btn" onclick="applyDateFilter('365', event)">Last 12 Months</button>
-      <button class="filter-btn" onclick="applyDateFilter('2025', event)">2025</button>
-      <button class="filter-btn" onclick="applyDateFilter('2024', event)">2024</button>
-      <button class="filter-btn" onclick="applyDateFilter('2023', event)">2023</button>
-      <button class="filter-btn" onclick="applyDateFilter('2022', event)">2022</button>
-      <button class="filter-btn" onclick="applyDateFilter('2021', event)">2021</button>
+      <div class="table-header compact">
+        <div class="controls-left">
+          <div class="filter-buttons condensed">
+            <button class="filter-btn active" onclick="applyDateFilter('all', event)">All Time</button>
+            <button class="filter-btn" onclick="applyDateFilter('30', event)">Last 30 Days</button>
+            <button class="filter-btn" onclick="applyDateFilter('90', event)">Last 90 Days</button>
+            <button class="filter-btn" onclick="applyDateFilter('180', event)">Last 6 Months</button>
+            <button class="filter-btn" onclick="applyDateFilter('365', event)">Last 12 Months</button>
+            <button class="filter-btn" onclick="applyDateFilter('2025', event)">2025</button>
+            <button class="filter-btn" onclick="applyDateFilter('2024', event)">2024</button>
+            <button class="filter-btn" onclick="applyDateFilter('2023', event)">2023</button>
+            <button class="filter-btn" onclick="applyDateFilter('2022', event)">2022</button>
+            <button class="filter-btn" onclick="applyDateFilter('2021', event)">2021</button>
 
-      <button class="filter-btn unpaid-filter" onclick="applyUnpaidFilter()">Unpaid Income</button>
-      <button class="filter-btn void-filter" onclick="toggleVoidFilter()">Show Voided</button>
+            <button class="filter-btn unpaid-filter" onclick="applyUnpaidFilter()">Unpaid Income</button>
+            <button class="filter-btn void-filter" onclick="toggleVoidFilter()">Show Voided</button>
 
-      <select class="dropdown-filter" id="incomeTypeFilter" onchange="applyDropdownFilters()">
-        <option value="">All Income Types</option>
-      </select>
-      <select class="dropdown-filter" id="currencyFilter" onchange="applyDropdownFilters()">
-        <option value="">All Currencies</option>
-      </select>
-    </div>
-  </div>
-
-  <div class="controls-right">
-    <input type="text" id="searchBox" class="search-box" placeholder="Search data..." />
-                <div class="table-actions">
-<button class="export-btn" id="exportCsvBtn" onclick="exportCSV()">⬇ Export CSV</button>
-</div>
-    <span id="recordCount" class="record-count"></span>
-  </div>
-</div>      
-
-        
-        <div id="tableContent">
-            <div class="loading">Loading your data...</div>
+            <!-- Multi-select containers -->
+            <div class="multi-select" id="incomeTypeMulti"></div>
+            <div class="multi-select" id="currencyMulti"></div>
+          </div>
         </div>
-        
-        <div class="pagination-container" id="paginationContainer" style="display: none;">
-            <div class="pagination-info" id="paginationInfo"></div>
-            <div class="pagination-controls">
-                <button class="pagination-btn" id="prevBtn" onclick="changePage(-1)">← Previous</button>
-                <span id="pageNumbers"></span>
-                <button class="pagination-btn" id="nextBtn" onclick="changePage(1)">Next →</button>
-            </div>
+
+        <div class="controls-right">
+          <input type="text" id="searchBox" class="search-box" placeholder="Search data..." />
+          <div class="table-actions">
+            <button class="export-btn" id="exportCsvBtn" onclick="exportCSV()">⬇ Export CSV</button>
+          </div>
+          <span id="recordCount" class="record-count"></span>
         </div>
+      </div>
+
+      <div id="tableContent">
+        <div class="loading">Loading your data...</div>
+      </div>
+
+      <div class="pagination-container" id="paginationContainer" style="display: none;">
+        <div class="pagination-info" id="paginationInfo"></div>
+        <div class="pagination-controls">
+          <button class="pagination-btn" id="prevBtn" onclick="changePage(-1)">← Previous</button>
+          <span id="pageNumbers"></span>
+          <button class="pagination-btn" id="nextBtn" onclick="changePage(1)">Next →</button>
+        </div>
+      </div>
     </div>
-    
+
     <button class="refresh-btn" onclick="loadData()" title="Refresh Data">↻</button>
-</div>
-    <script>
-        let currentUserEmail = '';
-        let currentData = null;
-        let filteredData = null;
-        let sortOrder = {};
-        let currentPage = 1;
-        let recordsPerPage = 50;
-        let currentDateFilter = 'all';
-        let isUnpaidFilter = false;
-        let showVoidedItems = false;
-        let selectedIncomeType = '';
-        let selectedCurrency = '';
+  </div>
 
-function applyDateFilter(filter, evt) {
-  document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => btn.classList.remove('active'));
-  if (evt && evt.target) evt.target.classList.add('active');
-  currentDateFilter = filter;
-  isUnpaidFilter = false;
-  const unpaidBtn = document.querySelector('.unpaid-filter');
-  if (unpaidBtn) unpaidBtn.classList.remove('active');
-  applyFilters();
-}
-        
-        function applyUnpaidFilter() {
-            isUnpaidFilter = !isUnpaidFilter;
-            const unpaidBtn = document.querySelector('.unpaid-filter');
-            if (isUnpaidFilter) {
-                unpaidBtn.classList.add('active');
-                document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                currentDateFilter = 'all';
-            } else {
-                unpaidBtn.classList.remove('active');
-                currentDateFilter = 'all';
-                const allTimeBtn = document.querySelector('.filter-btn');
-                if (allTimeBtn) allTimeBtn.classList.add('active');
-            }
-            applyFilters();
-        }
+  <script>
+    let currentUserEmail = '';
+    let currentData = null;
+    let filteredData = null;
+    let sortOrder = {};
+    let currentPage = 1;
+    let recordsPerPage = 50;
+    let currentDateFilter = 'all';
+    let isUnpaidFilter = false;
+    let showVoidedItems = false;
 
-        function toggleVoidFilter() {
-            showVoidedItems = !showVoidedItems;
-            const voidBtn = document.querySelector('.void-filter');
-            if (showVoidedItems) {
-                voidBtn.classList.add('active');
-                voidBtn.textContent = 'Hide Voided';
-            } else {
-                voidBtn.classList.remove('active');
-                voidBtn.textContent = 'Show Voided';
-            }
-            applyFilters();
-        }
+    // NEW: multi-select state
+    let selectedIncomeTypes = new Set();
+    let selectedCurrencies  = new Set();
 
-        function applyDropdownFilters() {
-            const incomeTypeFilter = document.getElementById('incomeTypeFilter');
-            const currencyFilter = document.getElementById('currencyFilter');
-            selectedIncomeType = incomeTypeFilter ? incomeTypeFilter.value : '';
-            selectedCurrency = currencyFilter ? currencyFilter.value : '';
-            applyFilters();
-        }
-
-        function applyFilters() {
-            if (!currentData) return;
-            filteredData = getFilteredDataByDateAndUnpaid();
-            const searchBox = document.getElementById('searchBox');
-            const searchTerm = searchBox ? searchBox.value.toLowerCase().trim() : '';
-            if (searchTerm) {
-                filteredData = filteredData.filter(record => {
-                    const searchableText = Object.values(record.properties).map(property => {
-                        if (!property) return '';
-                        return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
-                    }).join(' ');
-                    return searchableText.includes(searchTerm);
-                });
-            }
-            currentPage = 1;
-            displayDataAsTable(currentData);
-        }
-
-        function filterData() {
-            applyFilters();
-        }
-
-        window.addEventListener('load', function() {
-            console.log('Window loaded, starting initialization...');
-            const urlParams = new URLSearchParams(window.location.search);
-            const userEmail = urlParams.get('userEmail');
-            console.log('userEmail from URL:', userEmail);
-            if (!userEmail) {
-                console.error('No userEmail parameter found in URL');
-                showError('No user specified. Please access through proper link.');
-                return;
-            }
-            currentUserEmail = userEmail;
-            const userEmailElement = document.getElementById('userEmail');
-            if (userEmailElement) {
-                userEmailElement.textContent = userEmail;
-            }
-            console.log("Starting loadData for user:", userEmail);
-            loadData();
-        });
-
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, setting up search...');
-            const searchBox = document.getElementById('searchBox');
-            if (searchBox) {
-                searchBox.addEventListener('input', filterData);
-                console.log('Search box event listener added');
-            }
-        });
-
-        async function loadData() {
-            const tableContent = document.getElementById('tableContent');
-            tableContent.innerHTML = '<div class="loading">Verifying access and loading your data...</div>';
-
-            try {
-                const urlParams = new URLSearchParams(window.location.search);
-                const userEmail = urlParams.get('userEmail');
-                const secureKey = urlParams.get('secureKey');
-                const timestamp = urlParams.get('timestamp');
-                
-                console.log('URL Parameters:', { userEmail, secureKey: secureKey ? 'present' : 'missing', timestamp });
-                
-                if (!userEmail || !secureKey || !timestamp) {
-                    throw new Error('Missing authentication parameters');
-                }
-                
-                console.log("Making API request for:", userEmail);
-                
-                const apiUrl = `/api/client-data?userEmail=${encodeURIComponent(userEmail)}&secureKey=${secureKey}&timestamp=${timestamp}`;
-                console.log("API URL:", apiUrl);
-                
-                const response = await fetch(apiUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                console.log("API Response status:", response.status);
-                
-                if (!response.ok) {
-                    let errorMessage = `Access denied: ${response.status}`;
-                    try {
-                        const errorData = await response.json();
-                        console.error('API Error data:', errorData);
-                        errorMessage = errorData.error || errorMessage;
-                    } catch (parseError) {
-                        const errorText = await response.text();
-                        console.error('Raw error response:', errorText);
-                    }
-                    throw new Error(errorMessage);
-                }
-
-                const data = await response.json();
-                console.log("API Success - data received:", data);
-                
-                if (data.authorizedClient) {
-                    document.getElementById('clientDisplay').textContent = `${data.authorizedClient} Dashboard`;
-                }
-                
-                currentData = data;
-                populateDropdownFilters(data);
-                displayDataAsTable(data);
-                updateSummaryBoxes();
-                
-            } catch (error) {
-                console.error('API Error details:', error);
-                showError(`Access Denied: ${error.message}<br><br>Please access this dashboard through the official website.`);
-            }
-        }
-
-        function populateDropdownFilters(data) {
-    if (!data.metadata) return;
-    const incomeTypeFilter = document.getElementById('incomeTypeFilter');
-    incomeTypeFilter.innerHTML = '<option value="">All Income Types</option>';
-    (data.metadata.incomeTypes || []).forEach(type => {
-        incomeTypeFilter.innerHTML += `<option value="${type}">${type}</option>`;
-    });
-
-    const currencyFilter = document.getElementById('currencyFilter');
-    currencyFilter.innerHTML = '<option value="">All Currencies</option>';
-    (data.metadata.currencies || []).forEach(currency => {
-        currencyFilter.innerHTML += `<option value="${currency}">${currency}</option>`;
-    });
-}
-
-        function displayDataAsTable(data) {
-            const tableContent = document.getElementById('tableContent');
-            if (!data.results || data.results.length === 0) {
-                tableContent.innerHTML = '<div class="no-data"><h3>No data found</h3></div>';
-                return;
-            }
-
-            const displayData = filteredData || data.results;
-            const totalRecords = displayData.length;
-            const totalPages = Math.ceil(totalRecords / recordsPerPage);
-            const startIndex = (currentPage - 1) * recordsPerPage;
-            const endIndex = startIndex + recordsPerPage;
-            const pageData = displayData.slice(startIndex, endIndex);
-            
-            updateRecordCount(pageData.length, totalRecords, startIndex + 1, Math.min(endIndex, totalRecords));
-            
-            const columnOrder = data.columnOrder || [];
-            const columnHeaders = data.columnHeaders || {};
-            
-            let properties = [];
-            if (columnOrder.length > 0) {
-                properties = columnOrder.filter(col => {
-                    return data.results.some(record => record.properties[col]);
-                });
-            } else {
-                const propSet = new Set();
-                data.results.forEach(record => {
-                    Object.keys(record.properties).forEach(prop => {
-                        if (prop !== 'Client') propSet.add(prop);
-                    });
-                });
-                properties = Array.from(propSet);
-            }
-            
-            let html = '<div class="table-wrapper"><table class="data-table"><thead><tr>';
-            
-            properties.forEach(prop => {
-                const displayName = columnHeaders[prop] || prop;
-                html += `<th data-column="${prop}" onclick="sortTable('${prop}')">${displayName}<span class="sort-indicator"></span></th>`;
-            });
-            html += '</tr></thead><tbody>';
-            
-            pageData.forEach((record, index) => {
-                const voidProperty = record.properties['VOID?'];
-                const isVoided = voidProperty ? voidProperty?.checkbox === true : false;
-                const rowClass = isVoided ? 'void-row' : '';
-                
-                html += `<tr class="${rowClass}">`;
-                properties.forEach(prop => {
-                    const property = record.properties[prop];
-                    const value = property ? getPropertyValue(property, prop) : '';
-                    html += `<td>${value}</td>`;
-                });
-                html += '</tr>';
-            });
-            
-            html += '</tbody></table></div>';
-            tableContent.innerHTML = html;
-            
-            updatePagination(totalPages, totalRecords);
-            document.getElementById('summaryContainer').style.display = 'grid';
-            updateSummaryBoxes();
-        }
-
-        function sortTable(column) {
-            if (!currentData || !currentData.results) return;
-            
-            if (sortOrder[column] === 'asc') {
-                sortOrder[column] = 'desc';
-            } else {
-                sortOrder[column] = 'asc';
-            }
-            
-            Object.keys(sortOrder).forEach(col => {
-                if (col !== column) {
-                    delete sortOrder[col];
-                    const header = document.querySelector(`th[data-column="${col}"]`);
-                    if (header) {
-                        header.classList.remove('sorted-asc', 'sorted-desc');
-                    }
-                }
-            });
-            
-            const headers = document.querySelectorAll('th[data-column]');
-            headers.forEach(header => {
-                const col = header.getAttribute('data-column');
-                header.classList.remove('sorted-asc', 'sorted-desc');
-                if (col === column) {
-                    header.classList.add(sortOrder[column] === 'asc' ? 'sorted-asc' : 'sorted-desc');
-                }
-            });
-            
-            const dataToSort = filteredData || currentData.results;
-            dataToSort.sort((a, b) => {
-                const aValue = getPropertySortValue(a.properties[column]);
-                const bValue = getPropertySortValue(b.properties[column]);
-                
-                if (aValue === bValue) return 0;
-                
-                const comparison = aValue < bValue ? -1 : 1;
-                return sortOrder[column] === 'asc' ? comparison : -comparison;
-            });
-            
-            if (filteredData) {
-                filteredData = dataToSort;
-            } else {
-                currentData.results = dataToSort;
-            }
-            
-            currentPage = 1;
-            displayDataAsTable(currentData);
-        }
-
-        function getPropertySortValue(property) {
-            if (!property) return '';
-            
-            switch (property.type) {
-                case 'number':
-                    return property.number || 0;
-                case 'date':
-                    return property.date ? new Date(property.date.start).getTime() : 0;
-                case 'select':
-                    return property.select ? property.select.name.toLowerCase() : '';
-                case 'multi_select':
-                    return property.multi_select.map(tag => tag.name).join(' ').toLowerCase();
-                case 'title':
-                    return property.title.map(t => t.plain_text).join('').toLowerCase();
-                case 'rich_text':
-                    return property.rich_text.map(t => t.plain_text).join('').toLowerCase();
-                case 'relation':
-                    return property.relation_titles ? property.relation_titles.toLowerCase() : '';
-                default:
-                    return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
-            }
-        }
-
- function getFilteredDataByDateAndUnpaid() {
-    if (!currentData || !currentData.results) return [];
-
-    let filtered = [...currentData.results];
-
-    // Hide voided unless toggled on
-    if (!showVoidedItems) {
-        filtered = filtered.filter(record => {
-            const voidProperty = record.properties['VOID?'];
-            const isVoided = !!(voidProperty && voidProperty.checkbox === true);
-            return !isVoided;
-        });
+    function applyDateFilter(filter, evt) {
+      document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => btn.classList.remove('active'));
+      if (evt && evt.target) evt.target.classList.add('active');
+      currentDateFilter = filter;
+      isUnpaidFilter = false;
+      const unpaidBtn = document.querySelector('.unpaid-filter');
+      if (unpaidBtn) unpaidBtn.classList.remove('active');
+      applyFilters();
     }
 
-    // Income type filter
-    if (selectedIncomeType) {
-        filtered = filtered.filter(record => {
-            const incomeType = record.properties['Income Type']?.select?.name;
-            return incomeType === selectedIncomeType;
-        });
-    }
-
-    // Currency filter
-    if (selectedCurrency) {
-        filtered = filtered.filter(record => {
-            const currency = record.properties['Currency']?.select?.name;
-            return currency === selectedCurrency;
-        });
-    }
-
-    // Date range / year filter
-    if (currentDateFilter !== 'all') {
-        filtered = filtered.filter(record => {
-            const dateProperty = record.properties['Invoice date'];
-            if (!dateProperty || !dateProperty.date) return false;
-
-            const recordDate = new Date(dateProperty.date.start);
-            const now = new Date();
-
-            if (currentDateFilter === '30') {
-                const d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-                return recordDate >= d;
-            } else if (currentDateFilter === '90') {
-                const d = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-                return recordDate >= d;
-            } else if (currentDateFilter === '180') {
-                const d = new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
-                return recordDate >= d;
-            } else if (currentDateFilter === '365') {
-                const d = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-                return recordDate >= d;
-            } else {
-                // treat as a specific year (e.g., '2025')
-                return recordDate.getFullYear().toString() === currentDateFilter;
-            }
-        });
-    }
-
-    // Unpaid filter
-    if (isUnpaidFilter) {
-        filtered = filtered.filter(record => {
-            const amountReceived = record.properties['Amount Received'];
-            const val = amountReceived?.number;
-            return val === undefined || val === null || val === 0;
-        });
-    }
-
-    return filtered;
-}
-        
-        function updatePagination(totalPages, totalRecords) {
-            const paginationContainer = document.getElementById('paginationContainer');
-            const paginationInfo = document.getElementById('paginationInfo');
-            const prevBtn = document.getElementById('prevBtn');
-            const nextBtn = document.getElementById('nextBtn');
-            const pageNumbers = document.getElementById('pageNumbers');
-            
-            if (totalPages <= 1) {
-                paginationContainer.style.display = 'none';
-                return;
-            }
-            
-            paginationContainer.style.display = 'flex';
-            
-            const startRecord = (currentPage - 1) * recordsPerPage + 1;
-            const endRecord = Math.min(currentPage * recordsPerPage, totalRecords);
-            paginationInfo.textContent = `Showing ${startRecord}-${endRecord} of ${totalRecords} records`;
-            
-            prevBtn.disabled = currentPage === 1;
-            nextBtn.disabled = currentPage === totalPages;
-            
-            let pageNumbersHtml = '';
-            const showPages = 5;
-            let startPage = Math.max(1, currentPage - Math.floor(showPages / 2));
-            let endPage = Math.min(totalPages, startPage + showPages - 1);
-            
-            if (endPage - startPage < showPages - 1) {
-                startPage = Math.max(1, endPage - showPages + 1);
-            }
-            
-            for (let i = startPage; i <= endPage; i++) {
-                const activeClass = i === currentPage ? 'active' : '';
-                pageNumbersHtml += `<button class="pagination-btn ${activeClass}" onclick="goToPage(${i})">${i}</button>`;
-            }
-            
-            pageNumbers.innerHTML = pageNumbersHtml;
-        }
-        
-        function changePage(direction) {
-            const totalPages = Math.ceil((filteredData || currentData.results).length / recordsPerPage);
-            const newPage = currentPage + direction;
-            
-            if (newPage >= 1 && newPage <= totalPages) {
-                currentPage = newPage;
-                displayDataAsTable(currentData);
-            }
-        }
-        
-        function goToPage(page) {
-            currentPage = page;
-            displayDataAsTable(currentData);
-        }
-
-        function updateRecordCount(displayed, total, start, end) {
-            const recordCount = document.getElementById('recordCount');
-            if (start && end) {
-                recordCount.textContent = `${start}-${end} of ${total} records`;
-            } else if (displayed === total) {
-                recordCount.textContent = `${total} record${total !== 1 ? 's' : ''}`;
-            } else {
-                recordCount.textContent = `${displayed} of ${total} record${total !== 1 ? 's' : ''}`;
-            }
-        }
-
-       // helpers (keep these once, above the function)
-function getNumberProp(record, keys) {
-  for (const k of keys) {
-    const p = record.properties?.[k];
-    if (p && p.type === 'number' && typeof p.number === 'number') return p.number;
-  }
-  return null; // important so we can tell missing vs 0
-}
-function getSelectNameProp(record, keys) {
-  for (const k of keys) {
-    const p = record.properties?.[k];
-    if (p && p.type === 'select' && p.select?.name) return p.select.name;
-  }
-  return 'Unknown';
-}
-
-// === Replace your updateSummaryBoxes with this ===
-function updateSummaryBoxes() {
-  if (!currentData || !currentData.results) return;
-
-  const rows = filteredData || currentData.results;
-
-  const totalByCurr = {};
-  const unpaidByCurr = {};
-
-  rows.forEach(rec => {
-    // ✅ Skip voided rows
-    const voidProp = rec.properties?.['VOID?'];
-    if (voidProp && voidProp.type === 'checkbox' && voidProp.checkbox === true) {
-      return;
-    }
-
-    const net = getNumberProp(rec, ['Net Amount', 'Net']);
-    if (net === null) return; // skip if no net value
-
-    const received = getNumberProp(rec, ['Amount Received', 'Received Amount']);
-    const invCurr = getSelectNameProp(rec, ['Currency (Inv/Stmt)', 'Currency', 'Currency (Invoice)']);
-
-    // Total income by currency = sum of Net Amount
-    totalByCurr[invCurr] = (totalByCurr[invCurr] || 0) + net;
-
-    // Unpaid only if Amount Received === 0 or missing
-    if (received === null || received === 0) {
-      unpaidByCurr[invCurr] = (unpaidByCurr[invCurr] || 0) + net;
-    }
-  });
-
-  // ----- Render: Total Income
-  const totalEntries = Object.entries(totalByCurr);
-  document.getElementById('totalIncome').textContent =
-    totalEntries.length ? totalEntries.map(([c, a]) => `${c} ${formatNumber(a)}`).join(' | ') : 'No data';
-  document.getElementById('totalIncomeBreakdown').textContent =
-    totalEntries.map(([c, a]) => `${c}: ${formatNumber(a)}`).join('\n');
-
-  // ----- Render: Unpaid (full unpaid only)
-  const unpaidEntries = Object.entries(unpaidByCurr);
-  document.getElementById('unpaidIncome').textContent =
-    unpaidEntries.length ? unpaidEntries.map(([c, a]) => `${c} ${formatNumber(a)}`).join(' | ') : 'All paid';
-  document.getElementById('unpaidIncomeBreakdown').textContent =
-    unpaidEntries.map(([c, a]) => `${c}: ${formatNumber(a)}`).join('\n');
-}
-
-        function formatNumber(num) {
-            if (num === null || num === undefined || num === '') return '';
-            return Number(num).toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            });
-        }
-        
-        function formatPercentage(num) {
-            if (num === null || num === undefined || num === '') return '';
-            return (Number(num) * 100).toFixed(2) + '%';
-        }
-
-        function formatDate(dateString) {
-            if (!dateString) return '';
-            const date = new Date(dateString);
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            const day = date.getDate().toString().padStart(2, '0');
-            const month = months[date.getMonth()];
-            const year = date.getFullYear();
-            return `${day} ${month} ${year}`;
-        }
-
-        function getTagClass(tagName) {
-            const name = tagName.toLowerCase().replace(/\s+/g, '-');
-            
-            const incomeTypeMap = {
-                'royalties': 'royalties',
-                'publishing': 'publishing', 
-                'master': 'master',
-                'royalties - publishing': 'publishing',
-                'royalties - master': 'master'
-            };
-            
-            if (incomeTypeMap[name]) {
-                return incomeTypeMap[name];
-            }
-            
-            const colorMap = {
-                'gray': 'gray', 'grey': 'gray',
-                'brown': 'brown', 'orange': 'orange',
-                'yellow': 'yellow', 'green': 'green',
-                'blue': 'blue', 'purple': 'purple',
-                'pink': 'pink', 'red': 'red'
-            };
-            
-            for (const [key, value] of Object.entries(colorMap)) {
-                if (name.includes(key)) return value;
-            }
-            
-            const colors = ['blue', 'green', 'purple', 'orange', 'pink', 'yellow'];
-            let hash = 0;
-            for (let i = 0; i < tagName.length; i++) {
-                hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            return colors[Math.abs(hash) % colors.length];
-        }
-
-        function getPropertyValue(property, columnName) {
-            if (!property) return '';
-            
-            if (columnName === 'Commission %' && property.type === 'number') {
-                return formatPercentage(property.number);
-            }
-            
-            switch (property.type) {
-                case 'title':
-                    return property.title.map(t => t.plain_text).join('');
-                case 'rich_text':
-                    return property.rich_text.map(t => t.plain_text).join('');
-                case 'number':
-                    return property.number !== null ? formatNumber(property.number) : '';
-                case 'select':
-                    if (property.select) {
-                        const tagClass = getTagClass(property.select.name);
-                        return `<span class="tag ${tagClass}">${property.select.name}</span>`;
-                    }
-                    return '';
-                case 'multi_select':
-                    return property.multi_select.map(tag => {
-                        const tagClass = getTagClass(tag.name);
-                        return `<span class="tag ${tagClass}">${tag.name}</span>`;
-                    }).join(' ');
-                case 'date':
-                    return property.date ? formatDate(property.date.start) : '';
-                case 'checkbox':
-                    return property.checkbox ? '✅' : '❌';
-                case 'url':
-                    return property.url ? `<a href="${property.url}" target="_blank" style="color: #667eea;">🔗 Link</a>` : '';
-                case 'email':
-                    return property.email ? `<a href="mailto:${property.email}" style="color: #667eea;">📧 ${property.email}</a>` : '';
-                case 'phone_number':
-                    return property.phone_number ? `📞 ${property.phone_number}` : '';
-                case 'status':
-                    if (property.status) {
-                        const status = property.status.name.toLowerCase().replace(/\s+/g, '-');
-                        return `<span class="status ${status}">${property.status.name}</span>`;
-                    }
-                    return '';
-                case 'people':
-                    return property.people.map(person => `👤 ${person.name}`).join(', ');
-                case 'relation':
-                    if (property.relation && property.relation.length > 0) {
-                        if (property.relation_titles) {
-                            return property.relation_titles;
-                        }
-                        return `${property.relation.length} linked item${property.relation.length !== 1 ? 's' : ''}`;
-                    }
-                    return '';
-                case 'formula':
-                    if (!property.formula) return '';
-                    const formulaResult = property.formula;
-                    if (formulaResult.type === 'string') {
-                        return formulaResult.string || '';
-                    } else if (formulaResult.type === 'number') {
-                        if (columnName === 'Commission %') {
-                            return formatPercentage(formulaResult.number);
-                        }
-                        return formulaResult.number !== null ? formatNumber(formulaResult.number) : '';
-                    } else if (formulaResult.type === 'boolean') {
-                        return formulaResult.boolean ? '✅' : '❌';
-                    } else if (formulaResult.type === 'date') {
-                        return formulaResult.date ? formatDate(formulaResult.date.start) : '';
-                    } else {
-                        return formulaResult.string || formulaResult.number || '';
-                    }
-                case 'rollup':
-                    if (!property.rollup) return '';
-                    switch (property.rollup.type) {
-                        case 'number':
-                            if (columnName === 'Commission %') {
-                                return formatPercentage(property.rollup.number);
-                            }
-                            return property.rollup.number ? formatNumber(property.rollup.number) : '';
-                        case 'date':
-                            return property.rollup.date ? formatDate(property.rollup.date.start) : '';
-                        case 'array':
-                            if (property.rollup.array && property.rollup.array.length > 0) {
-                                return property.rollup.array.map(item => {
-                                    if (item.type === 'number') {
-                                        if (columnName === 'Commission %') {
-                                            return formatPercentage(item.number);
-                                        }
-                                        return item.number ? formatNumber(item.number) : '';
-                                    } else if (item.type === 'rich_text') {
-                                        return item.rich_text.map(t => t.plain_text).join('');
-                                    } else if (item.type === 'title') {
-                                        return item.title.map(t => t.plain_text).join('');
-                                    }
-                                    return '';
-                                }).filter(val => val).join(', ');
-                            }
-                            return '';
-                        default:
-                            return '';
-                    }
-                case 'files':
-                    if (property.files && property.files.length > 0) {
-                        return `📎 ${property.files.length} file${property.files.length !== 1 ? 's' : ''}`;
-                    }
-                    return '';
-                case 'created_time':
-                    return formatDate(property.created_time);
-                case 'last_edited_time':
-                    return formatDate(property.last_edited_time);
-                case 'created_by':
-                    return property.created_by.name || 'Unknown';
-                case 'last_edited_by':
-                    return property.last_edited_by.name || 'Unknown';
-                default:
-                    console.log('Unhandled property type:', property.type, property);
-                    return JSON.stringify(property).substring(0, 50) + '...';
-            }
-        }
-
-        function showError(message) {
-            const tableContent = document.getElementById('tableContent');
-            tableContent.innerHTML = `<div class="error">${message}</div>`;
-        }
-
-        window.loadData = loadData;
-
-function csvEscape(val){
-  if (val === null || val === undefined) return '""';
-  const s = String(val).replace(/\r?\n|\r/g, ' ').replace(/"/g, '""');
-  return `"${s}"`;
-}
-
-function getPlainValue(property, columnName){
-  if (!property) return '';
-  switch (property.type) {
-    case 'title':      return property.title.map(t=>t.plain_text).join('');
-    case 'rich_text':  return property.rich_text.map(t=>t.plain_text).join('');
-    case 'number':     return property.number ?? '';
-    case 'select':     return property.select?.name || '';
-    case 'multi_select': return property.multi_select.map(t=>t.name).join('; ');
-    case 'date':       return property.date ? formatDate(property.date.start) : '';
-    case 'checkbox':   return property.checkbox ? 'TRUE' : 'FALSE';
-    case 'url':        return property.url || '';
-    case 'email':      return property.email || '';
-    case 'phone_number': return property.phone_number || '';
-    case 'status':     return property.status?.name || '';
-    case 'people':     return (property.people||[]).map(p=>p.name).join('; ');
-    case 'relation':
-      if (property.relation_titles) return property.relation_titles;
-      if (property.relation?.length) return `${property.relation.length} linked`;
-      return '';
-    case 'formula': {
-      const f = property.formula; if (!f) return '';
-      if (f.type==='string') return f.string || '';
-      if (f.type==='number') return f.number ?? '';
-      if (f.type==='boolean') return f.boolean ? 'TRUE' : 'FALSE';
-      if (f.type==='date') return f.date ? formatDate(f.date.start) : '';
-      return '';
-    }
-    case 'rollup': {
-      const r = property.rollup; if (!r) return '';
-      if (r.type==='number') return r.number ?? '';
-      if (r.type==='date')   return r.date ? formatDate(r.date.start) : '';
-      if (r.type==='array'){
-        return r.array.map(item=>{
-          if (item.type==='number') return item.number ?? '';
-          if (item.type==='rich_text') return item.rich_text.map(t=>t.plain_text).join('');
-          if (item.type==='title') return item.title.map(t=>t.plain_text).join('');
-          return '';
-        }).filter(Boolean).join('; ');
+    function applyUnpaidFilter() {
+      isUnpaidFilter = !isUnpaidFilter;
+      const unpaidBtn = document.querySelector('.unpaid-filter');
+      if (isUnpaidFilter) {
+        unpaidBtn.classList.add('active');
+        document.querySelectorAll('.filter-btn:not(.unpaid-filter):not(.void-filter)').forEach(btn => btn.classList.remove('active'));
+        currentDateFilter = 'all';
+      } else {
+        unpaidBtn.classList.remove('active');
+        currentDateFilter = 'all';
+        const allTimeBtn = document.querySelector('.filter-btn');
+        if (allTimeBtn) allTimeBtn.classList.add('active');
       }
-      return '';
-    }
-    case 'files': return (property.files||[]).map(f=>f.name || f.file?.url || f.external?.url).join('; ');
-    case 'created_time':     return formatDate(property.created_time);
-    case 'last_edited_time': return formatDate(property.last_edited_time);
-    case 'created_by':       return property.created_by?.name || '';
-    case 'last_edited_by':   return property.last_edited_by?.name || '';
-    default: return '';
-  }
-}
-
-function getActiveColumns(){
-  if (!currentData) return [];
-  const data = currentData;
-  const order = data.columnOrder || [];
-  if (order.length){
-    return order.filter(col => data.results.some(r => r.properties[col]));
-  }
-  const set = new Set();
-  data.results.forEach(r => {
-    Object.keys(r.properties||{}).forEach(p => { if (p!=='Client') set.add(p); });
-  });
-  return Array.from(set);
-}
-
-function getActiveRows(){
-  return (filteredData || (currentData ? currentData.results : [])) || [];
-}
-
-function exportCSV(){
-  try {
-    if (!currentData || !currentData.results) {
-      alert('Data not loaded yet.'); 
-      return;
+      applyFilters();
     }
 
-    const cols = getActiveColumns();
-    const headersMap = currentData.columnHeaders || {};
-    const headerRow = cols.map(c => csvEscape(headersMap[c] || c)).join(',');
+    function toggleVoidFilter() {
+      showVoidedItems = !showVoidedItems;
+      const voidBtn = document.querySelector('.void-filter');
+      if (showVoidedItems) { voidBtn.classList.add('active'); voidBtn.textContent = 'Hide Voided'; }
+      else { voidBtn.classList.remove('active'); voidBtn.textContent = 'Show Voided'; }
+      applyFilters();
+    }
 
-    const rows = getActiveRows();
-    const csvLines = [headerRow];
+    function applyFilters() {
+      if (!currentData) return;
+      filteredData = getFilteredDataByDateAndUnpaid();
 
-    rows.forEach(rec => {
-      const row = cols.map(col => {
-        const plain = getPlainValue(rec.properties?.[col], col);
-        return csvEscape(plain);
-      }).join(',');
-      csvLines.push(row);
+      const searchBox = document.getElementById('searchBox');
+      const searchTerm = searchBox ? searchBox.value.toLowerCase().trim() : '';
+      if (searchTerm) {
+        filteredData = filteredData.filter(record => {
+          const searchableText = Object.values(record.properties).map(property => {
+            if (!property) return '';
+            return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
+          }).join(' ');
+          return searchableText.includes(searchTerm);
+        });
+      }
+      currentPage = 1;
+      displayDataAsTable(currentData);
+    }
+
+    function filterData() { applyFilters(); }
+
+    window.addEventListener('load', function() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const userEmail = urlParams.get('userEmail');
+      if (!userEmail) {
+        showError('No user specified. Please access through proper link.');
+        return;
+      }
+      currentUserEmail = userEmail;
+      const userEmailElement = document.getElementById('userEmail');
+      if (userEmailElement) userEmailElement.textContent = userEmail;
+      loadData();
     });
 
-    const csv = '\uFEFF' + csvLines.join('\n'); // BOM for Excel
-    const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const a    = document.createElement('a');
+    document.addEventListener('DOMContentLoaded', function() {
+      const searchBox = document.getElementById('searchBox');
+      if (searchBox) searchBox.addEventListener('input', filterData);
+    });
 
-    const client = (document.getElementById('clientDisplay')?.textContent || 'data')
-                   .replace(/\s+Dashboard$/,'').trim();
-    a.href = url;
-    a.download = `dashboard-${client}-${new Date().toISOString().slice(0,10)}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    async function loadData() {
+      const tableContent = document.getElementById('tableContent');
+      tableContent.innerHTML = '<div class="loading">Verifying access and loading your data...</div>';
 
-    console.log(`Exported ${rows.length} rows, ${cols.length} columns`);
-  } catch (e){
-    console.error('CSV export failed:', e);
-    alert('Sorry, CSV export failed. See console for details.');
-  }
-}
-    </script>
+      try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const userEmail = urlParams.get('userEmail');
+        const secureKey = urlParams.get('secureKey');
+        const timestamp = urlParams.get('timestamp');
+
+        if (!userEmail || !secureKey || !timestamp) throw new Error('Missing authentication parameters');
+
+        const apiUrl = `/api/client-data?userEmail=${encodeURIComponent(userEmail)}&secureKey=${secureKey}&timestamp=${timestamp}`;
+
+        const response = await fetch(apiUrl, { method:'GET', headers:{ 'Accept':'application/json', 'Cache-Control':'no-cache' } });
+        if (!response.ok) {
+          let errorMessage = `Access denied: ${response.status}`;
+          try { const errorData = await response.json(); errorMessage = errorData.error || errorMessage; }
+          catch { /* ignore */ }
+          throw new Error(errorMessage);
+        }
+
+        const data = await response.json();
+
+        if (data.authorizedClient) {
+          document.getElementById('clientDisplay').textContent = `${data.authorizedClient} Dashboard`;
+        }
+
+        currentData = data;
+        populateMultiSelectFilters(data);
+        displayDataAsTable(data);
+        updateSummaryBoxes();
+
+      } catch (error) {
+        showError(`Access Denied: ${error.message}<br><br>Please access this dashboard through the official website.`);
+      }
+    }
+
+    /* ---------- Multi-select builder ---------- */
+    function buildMultiSelect(containerId, options, selectedSet, label){
+      const el = document.getElementById(containerId);
+      if (!el) return;
+
+      el.innerHTML = `<button type="button" class="ms-trigger"></button><div class="ms-menu"></div>`;
+      const trigger = el.querySelector('.ms-trigger');
+      const menu = el.querySelector('.ms-menu');
+
+      function renderTrigger(){
+        const arr = Array.from(selectedSet);
+        trigger.textContent = arr.length && arr.length !== options.length ? `${label}: ${arr.join(', ')}` : `All ${label}`;
+      }
+
+      function renderMenu(){
+        menu.innerHTML = '';
+        options.forEach(opt => {
+          const id = `${containerId}-${opt}`.replace(/\s+/g,'-');
+          const row = document.createElement('label');
+          row.className = 'ms-item';
+          row.innerHTML = `<input type="checkbox" id="${id}" ${selectedSet.has(opt) ? 'checked':''}> <span>${opt}</span>`;
+          menu.appendChild(row);
+          row.querySelector('input').addEventListener('change', e => {
+            if (e.target.checked) selectedSet.add(opt); else selectedSet.delete(opt);
+            renderTrigger(); applyFilters();
+          });
+        });
+
+        const actions = document.createElement('div');
+        actions.className = 'ms-actions';
+        actions.innerHTML = `<button type="button" class="ms-clear">Clear</button><button type="button" class="ms-all">Select all</button>`;
+        actions.querySelector('.ms-clear').onclick = () => { selectedSet.clear(); renderMenu(); renderTrigger(); applyFilters(); };
+        actions.querySelector('.ms-all').onclick   = () => { options.forEach(o => selectedSet.add(o)); renderMenu(); renderTrigger(); applyFilters(); };
+        menu.appendChild(actions);
+      }
+
+      renderTrigger();
+      renderMenu();
+
+      trigger.onclick = () => el.classList.toggle('ms-open');
+      document.addEventListener('click', evt => { if (!el.contains(evt.target)) el.classList.remove('ms-open'); });
+    }
+
+    function populateMultiSelectFilters(data){
+      if (!data?.metadata) return;
+      const types = [...new Set((data.metadata.incomeTypes || []).filter(Boolean))].sort();
+      const currs = [...new Set((data.metadata.currencies  || []).filter(Boolean))].sort();
+
+      // Initialize to "all" on first load
+      if (selectedIncomeTypes.size === 0) types.forEach(t => selectedIncomeTypes.add(t));
+      if (selectedCurrencies.size  === 0) currs.forEach(c => selectedCurrencies.add(c));
+
+      buildMultiSelect('incomeTypeMulti', types, selectedIncomeTypes, 'Income Types');
+      buildMultiSelect('currencyMulti', currs, selectedCurrencies, 'Currencies');
+    }
+
+    /* ---------- Table render ---------- */
+    function displayDataAsTable(data) {
+      const tableContent = document.getElementById('tableContent');
+      if (!data.results || data.results.length === 0) {
+        tableContent.innerHTML = '<div class="no-data"><h3>No data found</h3></div>';
+        return;
+      }
+
+      const displayData = filteredData || data.results;
+      const totalRecords = displayData.length;
+      const totalPages = Math.ceil(totalRecords / recordsPerPage);
+      const startIndex = (currentPage - 1) * recordsPerPage;
+      const endIndex = startIndex + recordsPerPage;
+      const pageData = displayData.slice(startIndex, endIndex);
+
+      updateRecordCount(pageData.length, totalRecords, startIndex + 1, Math.min(endIndex, totalRecords));
+
+      const columnOrder = data.columnOrder || [];
+      const columnHeaders = data.columnHeaders || {};
+
+      let properties = [];
+      if (columnOrder.length > 0) {
+        properties = columnOrder.filter(col => data.results.some(record => record.properties[col]));
+      } else {
+        const propSet = new Set();
+        data.results.forEach(record => {
+          Object.keys(record.properties).forEach(prop => { if (prop !== 'Client') propSet.add(prop); });
+        });
+        properties = Array.from(propSet);
+      }
+
+      let html = '<div class="table-wrapper"><table class="data-table"><thead><tr>';
+      properties.forEach(prop => {
+        const displayName = columnHeaders[prop] || prop;
+        html += `<th data-column="${prop}" onclick="sortTable('${prop}')">${displayName}<span class="sort-indicator"></span><span class="col-resizer"></span></th>`;
+      });
+      html += '</tr></thead><tbody>';
+
+      pageData.forEach(record => {
+        const voidProperty = record.properties['VOID?'];
+        const isVoided = voidProperty ? voidProperty?.checkbox === true : false;
+        const rowClass = isVoided ? 'void-row' : '';
+
+        html += `<tr class="${rowClass}">`;
+        properties.forEach(prop => {
+          const property = record.properties[prop];
+          const value = property ? getPropertyValue(property, prop) : '';
+          html += `<td>${value}</td>`;
+        });
+        html += '</tr>';
+      });
+
+      html += '</tbody></table></div>';
+      tableContent.innerHTML = html;
+
+      enableColumnResize();            // <— NEW
+      updatePagination(totalPages, totalRecords);
+      document.getElementById('summaryContainer').style.display = 'grid';
+      updateSummaryBoxes();
+    }
+
+    function enableColumnResize() {
+      const table = document.querySelector('.data-table');
+      if (!table) return;
+      const ths = table.querySelectorAll('thead th');
+
+      ths.forEach((th, idx) => {
+        th.style.minWidth = '60px';
+        th.style.maxWidth = '800px';
+
+        const handle = th.querySelector('.col-resizer');
+        if (!handle) return;
+
+        let startX, startWidth;
+
+        const onMouseMove = (e) => {
+          const dx = e.clientX - startX;
+          const newW = Math.min(800, Math.max(60, startWidth + dx));
+          th.style.width = newW + 'px';
+          table.querySelectorAll(`tbody tr td:nth-child(${idx + 1})`).forEach(td => { td.style.width = newW + 'px'; });
+        };
+        const onMouseUp = () => {
+          document.removeEventListener('mousemove', onMouseMove);
+          document.removeEventListener('mouseup', onMouseUp);
+        };
+
+        handle.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+          startX = e.clientX;
+          startWidth = th.getBoundingClientRect().width;
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        });
+      });
+    }
+
+    function sortTable(column) {
+      if (!currentData || !currentData.results) return;
+
+      if (sortOrder[column] === 'asc') sortOrder[column] = 'desc';
+      else sortOrder[column] = 'asc';
+
+      Object.keys(sortOrder).forEach(col => {
+        if (col !== column) {
+          delete sortOrder[col];
+          const header = document.querySelector(`th[data-column="${col}"]`);
+          if (header) header.classList.remove('sorted-asc', 'sorted-desc');
+        }
+      });
+
+      const headers = document.querySelectorAll('th[data-column]');
+      headers.forEach(header => {
+        const col = header.getAttribute('data-column');
+        header.classList.remove('sorted-asc', 'sorted-desc');
+        if (col === column) header.classList.add(sortOrder[column] === 'asc' ? 'sorted-asc' : 'sorted-desc');
+      });
+
+      const dataToSort = filteredData || currentData.results;
+      dataToSort.sort((a, b) => {
+        const aValue = getPropertySortValue(a.properties[column]);
+        const bValue = getPropertySortValue(b.properties[column]);
+        if (aValue === bValue) return 0;
+        const comparison = aValue < bValue ? -1 : 1;
+        return sortOrder[column] === 'asc' ? comparison : -comparison;
+      });
+
+      if (filteredData) filteredData = dataToSort;
+      else currentData.results = dataToSort;
+
+      currentPage = 1;
+      displayDataAsTable(currentData);
+    }
+
+    function getPropertySortValue(property) {
+      if (!property) return '';
+      switch (property.type) {
+        case 'number': return property.number || 0;
+        case 'date': return property.date ? new Date(property.date.start).getTime() : 0;
+        case 'select': return property.select ? property.select.name.toLowerCase() : '';
+        case 'multi_select': return property.multi_select.map(tag => tag.name).join(' ').toLowerCase();
+        case 'title': return property.title.map(t => t.plain_text).join('').toLowerCase();
+        case 'rich_text': return property.rich_text.map(t => t.plain_text).join('').toLowerCase();
+        case 'relation': return property.relation_titles ? property.relation_titles.toLowerCase() : '';
+        default: return String(getPropertyValue(property)).toLowerCase().replace(/<[^>]*>/g, '');
+      }
+    }
+
+    function getFilteredDataByDateAndUnpaid() {
+      if (!currentData || !currentData.results) return [];
+      let filtered = [...currentData.results];
+
+      if (!showVoidedItems) {
+        filtered = filtered.filter(record => {
+          const voidProperty = record.properties['VOID?'];
+          const isVoided = !!(voidProperty && voidProperty.checkbox === true);
+          return !isVoided;
+        });
+      }
+
+      // Multi-select Income Types
+      if (selectedIncomeTypes.size > 0) {
+        filtered = filtered.filter(record => {
+          const incomeType = record.properties['Income Type']?.select?.name;
+          return incomeType ? selectedIncomeTypes.has(incomeType) : false;
+        });
+      }
+
+      // Multi-select Currencies
+      if (selectedCurrencies.size > 0) {
+        filtered = filtered.filter(record => {
+          const currency = record.properties['Currency']?.select?.name;
+          return currency ? selectedCurrencies.has(currency) : false;
+        });
+      }
+
+      if (currentDateFilter !== 'all') {
+        filtered = filtered.filter(record => {
+          const dateProperty = record.properties['Invoice date'];
+          if (!dateProperty || !dateProperty.date) return false;
+
+          const recordDate = new Date(dateProperty.date.start);
+          const now = new Date();
+
+          if (currentDateFilter === '30')  return recordDate >= new Date(now.getTime() - 30  * 24 * 60 * 60 * 1000);
+          if (currentDateFilter === '90')  return recordDate >= new Date(now.getTime() - 90  * 24 * 60 * 60 * 1000);
+          if (currentDateFilter === '180') return recordDate >= new Date(now.getTime() - 180 * 24 * 60 * 60 * 1000);
+          if (currentDateFilter === '365') return recordDate >= new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+          return recordDate.getFullYear().toString() === currentDateFilter;
+        });
+      }
+
+      if (isUnpaidFilter) {
+        filtered = filtered.filter(record => {
+          const amountReceived = record.properties['Amount Received'];
+          const val = amountReceived?.number;
+          return val === undefined || val === null || val === 0;
+        });
+      }
+
+      return filtered;
+    }
+
+    function updatePagination(totalPages, totalRecords) {
+      const paginationContainer = document.getElementById('paginationContainer');
+      const paginationInfo = document.getElementById('paginationInfo');
+      const prevBtn = document.getElementById('prevBtn');
+      const nextBtn = document.getElementById('nextBtn');
+      const pageNumbers = document.getElementById('pageNumbers');
+
+      if (totalPages <= 1) { paginationContainer.style.display = 'none'; return; }
+      paginationContainer.style.display = 'flex';
+
+      const startRecord = (currentPage - 1) * recordsPerPage + 1;
+      const endRecord = Math.min(currentPage * recordsPerPage, totalRecords);
+      paginationInfo.textContent = `Showing ${startRecord}-${endRecord} of ${totalRecords} records`;
+
+      prevBtn.disabled = currentPage === 1;
+      nextBtn.disabled = currentPage === totalPages;
+
+      let pageNumbersHtml = '';
+      const showPages = 5;
+      let startPage = Math.max(1, currentPage - Math.floor(showPages / 2));
+      let endPage = Math.min(totalPages, startPage + showPages - 1);
+
+      if (endPage - startPage < showPages - 1) startPage = Math.max(1, endPage - showPages + 1);
+
+      for (let i = startPage; i <= endPage; i++) {
+        const activeClass = i === currentPage ? 'active' : '';
+        pageNumbersHtml += `<button class="pagination-btn ${activeClass}" onclick="goToPage(${i})">${i}</button>`;
+      }
+      pageNumbers.innerHTML = pageNumbersHtml;
+    }
+
+    function changePage(direction) {
+      const totalPages = Math.ceil((filteredData || currentData.results).length / recordsPerPage);
+      const newPage = currentPage + direction;
+      if (newPage >= 1 && newPage <= totalPages) { currentPage = newPage; displayDataAsTable(currentData); }
+    }
+    function goToPage(page) { currentPage = page; displayDataAsTable(currentData); }
+
+    // Helpers for summary
+    function getNumberProp(record, keys) {
+      for (const k of keys) {
+        const p = record.properties?.[k];
+        if (p && p.type === 'number' && typeof p.number === 'number') return p.number;
+      }
+      return null;
+    }
+    function getSelectNameProp(record, keys) {
+      for (const k of keys) {
+        const p = record.properties?.[k];
+        if (p && p.type === 'select' && p.select?.name) return p.select.name;
+      }
+      return 'Unknown';
+    }
+
+    function updateSummaryBoxes() {
+      if (!currentData || !currentData.results) return;
+      const rows = filteredData || currentData.results;
+
+      const totalByCurr = {};
+      const unpaidByCurr = {};
+
+      rows.forEach(rec => {
+        const voidProp = rec.properties?.['VOID?'];
+        if (voidProp && voidProp.type === 'checkbox' && voidProp.checkbox === true) return;
+
+        const net = getNumberProp(rec, ['Net Amount', 'Net']);
+        if (net === null) return;
+
+        const received = getNumberProp(rec, ['Amount Received', 'Received Amount']);
+        const invCurr = getSelectNameProp(rec, ['Currency (Inv/Stmt)', 'Currency', 'Currency (Invoice)']);
+
+        totalByCurr[invCurr] = (totalByCurr[invCurr] || 0) + net;
+        if (received === null || received === 0) unpaidByCurr[invCurr] = (unpaidByCurr[invCurr] || 0) + net;
+      });
+
+      const totalEntries = Object.entries(totalByCurr);
+      document.getElementById('totalIncome').textContent =
+        totalEntries.length ? totalEntries.map(([c,a]) => `${c} ${formatNumber(a)}`).join(' | ') : 'No data';
+
+      const unpaidEntries = Object.entries(unpaidByCurr);
+      document.getElementById('unpaidIncome').textContent =
+        unpaidEntries.length ? unpaidEntries.map(([c,a]) => `${c} ${formatNumber(a)}`).join(' | ') : 'All paid';
+    }
+
+    function formatNumber(num) {
+      if (num === null || num === undefined || num === '') return '';
+      return Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function formatPercentage(num) {
+      if (num === null || num === undefined || num === '') return '';
+      return (Number(num) * 100).toFixed(2) + '%';
+    }
+    function formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      const day = date.getDate().toString().padStart(2,'0');
+      const month = months[date.getMonth()];
+      const year = date.getFullYear();
+      return `${day} ${month} ${year}`;
+    }
+
+    function getTagClass(tagName) {
+      const name = tagName.toLowerCase().replace(/\s+/g, '-');
+      const incomeTypeMap = { 'royalties':'royalties', 'publishing':'publishing', 'master':'master',
+        'royalties - publishing':'publishing', 'royalties - master':'master' };
+      if (incomeTypeMap[name]) return incomeTypeMap[name];
+      const colorMap = { 'gray':'gray','grey':'gray','brown':'brown','orange':'orange','yellow':'yellow',
+        'green':'green','blue':'blue','purple':'purple','pink':'pink','red':'red' };
+      for (const [key,val] of Object.entries(colorMap)) if (name.includes(key)) return val;
+      const colors = ['blue','green','purple','orange','pink','yellow']; let hash = 0;
+      for (let i=0;i<tagName.length;i++) hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
+      return colors[Math.abs(hash) % colors.length];
+    }
+
+    function getPropertyValue(property, columnName) {
+      if (!property) return '';
+      if (columnName === 'Commission %' && property.type === 'number') return formatPercentage(property.number);
+
+      switch (property.type) {
+        case 'title': return property.title.map(t => t.plain_text).join('');
+        case 'rich_text': return property.rich_text.map(t => t.plain_text).join('');
+        case 'number': return property.number !== null ? formatNumber(property.number) : '';
+        case 'select':
+          if (property.select) {
+            const tagClass = getTagClass(property.select.name);
+            return `<span class="tag ${tagClass}">${property.select.name}</span>`;
+          }
+          return '';
+        case 'multi_select':
+          return property.multi_select.map(tag => {
+            const tagClass = getTagClass(tag.name);
+            return `<span class="tag ${tagClass}">${tag.name}</span>`;
+          }).join(' ');
+        case 'date': return property.date ? formatDate(property.date.start) : '';
+        case 'checkbox': return property.checkbox ? '✅' : '❌';
+        case 'url': return property.url ? `<a href="${property.url}" target="_blank" style="color:#667eea;">🔗 Link</a>` : '';
+        case 'email': return property.email ? `<a href="mailto:${property.email}" style="color:#667eea;">📧 ${property.email}</a>` : '';
+        case 'phone_number': return property.phone_number ? `📞 ${property.phone_number}` : '';
+        case 'status':
+          if (property.status) {
+            const status = property.status.name.toLowerCase().replace(/\s+/g,'-');
+            return `<span class="status ${status}">${property.status.name}</span>`;
+          }
+          return '';
+        case 'people': return property.people.map(person => `👤 ${person.name}`).join(', ');
+        case 'relation':
+          if (property.relation && property.relation.length > 0) {
+            if (property.relation_titles) return property.relation_titles;
+            return `${property.relation.length} linked item${property.relation.length !== 1 ? 's' : ''}`;
+          }
+          return '';
+        case 'formula': {
+          const f = property.formula; if (!f) return '';
+          if (f.type === 'string') return f.string || '';
+          if (f.type === 'number') return columnName==='Commission %' ? formatPercentage(f.number) : (f.number !== null ? formatNumber(f.number) : '');
+          if (f.type === 'boolean') return f.boolean ? '✅' : '❌';
+          if (f.type === 'date') return f.date ? formatDate(f.date.start) : '';
+          return f.string || f.number || '';
+        }
+        case 'rollup':
+          if (!property.rollup) return '';
+          switch (property.rollup.type) {
+            case 'number': return columnName==='Commission %' ? formatPercentage(property.rollup.number) : (property.rollup.number ? formatNumber(property.rollup.number) : '');
+            case 'date': return property.rollup.date ? formatDate(property.rollup.date.start) : '';
+            case 'array':
+              if (property.rollup.array && property.rollup.array.length > 0) {
+                return property.rollup.array.map(item => {
+                  if (item.type === 'number') return columnName==='Commission %' ? formatPercentage(item.number) : (item.number ? formatNumber(item.number) : '');
+                  if (item.type === 'rich_text') return item.rich_text.map(t=>t.plain_text).join('');
+                  if (item.type === 'title') return item.title.map(t=>t.plain_text).join('');
+                  return '';
+                }).filter(v => v).join(', ');
+              }
+              return '';
+            default: return '';
+          }
+        case 'files': return property.files && property.files.length ? `📎 ${property.files.length} file${property.files.length !== 1 ? 's' : ''}` : '';
+        case 'created_time': return formatDate(property.created_time);
+        case 'last_edited_time': return formatDate(property.last_edited_time);
+        case 'created_by': return property.created_by.name || 'Unknown';
+        case 'last_edited_by': return property.last_edited_by.name || 'Unknown';
+        default:
+          return JSON.stringify(property).substring(0,50) + '...';
+      }
+    }
+
+    function showError(message) {
+      const tableContent = document.getElementById('tableContent');
+      tableContent.innerHTML = `<div class="error">${message}</div>`;
+    }
+
+    window.loadData = loadData;
+
+    /* -------- CSV Export helpers (kept from your version) -------- */
+    function csvEscape(val){
+      if (val === null || val === undefined) return '""';
+      const s = String(val).replace(/\r?\n|\r/g, ' ').replace(/"/g, '""');
+      return `"${s}"`;
+    }
+    function getPlainValue(property, columnName){
+      if (!property) return '';
+      switch (property.type) {
+        case 'title':      return property.title.map(t=>t.plain_text).join('');
+        case 'rich_text':  return property.rich_text.map(t=>t.plain_text).join('');
+        case 'number':     return property.number ?? '';
+        case 'select':     return property.select?.name || '';
+        case 'multi_select': return property.multi_select.map(t=>t.name).join('; ');
+        case 'date':       return property.date ? formatDate(property.date.start) : '';
+        case 'checkbox':   return property.checkbox ? 'TRUE' : 'FALSE';
+        case 'url':        return property.url || '';
+        case 'email':      return property.email || '';
+        case 'phone_number': return property.phone_number || '';
+        case 'status':     return property.status?.name || '';
+        case 'people':     return (property.people||[]).map(p=>p.name).join('; ');
+        case 'relation':
+          if (property.relation_titles) return property.relation_titles;
+          if (property.relation?.length) return `${property.relation.length} linked`;
+          return '';
+        case 'formula': {
+          const f = property.formula; if (!f) return '';
+          if (f.type==='string') return f.string || '';
+          if (f.type==='number') return f.number ?? '';
+          if (f.type==='boolean') return f.boolean ? 'TRUE' : 'FALSE';
+          if (f.type==='date') return f.date ? formatDate(f.date.start) : '';
+          return '';
+        }
+        case 'rollup': {
+          const r = property.rollup; if (!r) return '';
+          if (r.type==='number') return r.number ?? '';
+          if (r.type==='date')   return r.date ? formatDate(r.date.start) : '';
+          if (r.type==='array'){
+            return r.array.map(item=>{
+              if (item.type==='number') return item.number ?? '';
+              if (item.type==='rich_text') return item.rich_text.map(t=>t.plain_text).join('');
+              if (item.type==='title') return item.title.map(t=>t.plain_text).join('');
+              return '';
+            }).filter(Boolean).join('; ');
+          }
+          return '';
+        }
+        case 'files': return (property.files||[]).map(f=>f.name || f.file?.url || f.external?.url).join('; ');
+        case 'created_time':     return formatDate(property.created_time);
+        case 'last_edited_time': return formatDate(property.last_edited_time);
+        case 'created_by':       return property.created_by?.name || '';
+        case 'last_edited_by':   return property.last_edited_by?.name || '';
+        default: return '';
+      }
+    }
+    function getActiveColumns(){
+      if (!currentData) return [];
+      const data = currentData;
+      const order = data.columnOrder || [];
+      if (order.length){
+        return order.filter(col => data.results.some(r => r.properties[col]));
+      }
+      const set = new Set();
+      data.results.forEach(r => {
+        Object.keys(r.properties||{}).forEach(p => { if (p!=='Client') set.add(p); });
+      });
+      return Array.from(set);
+    }
+    function getActiveRows(){ return (filteredData || (currentData ? currentData.results : [])) || []; }
+    function exportCSV(){
+      try {
+        if (!currentData || !currentData.results) { alert('Data not loaded yet.'); return; }
+        const cols = getActiveColumns();
+        const headersMap = currentData.columnHeaders || {};
+        const headerRow = cols.map(c => csvEscape(headersMap[c] || c)).join(',');
+        const rows = getActiveRows();
+        const csvLines = [headerRow];
+        rows.forEach(rec => {
+          const row = cols.map(col => csvEscape(getPlainValue(rec.properties?.[col], col))).join(',');
+          csvLines.push(row);
+        });
+        const csv = '\uFEFF' + csvLines.join('\n'); // BOM for Excel
+        const blob = new Blob([csv], { type:'text/csv;charset=utf-8;' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        const client = (document.getElementById('clientDisplay')?.textContent || 'data').replace(/\s+Dashboard$/,'').trim();
+        a.href = url; a.download = `dashboard-${client}-${new Date().toISOString().slice(0,10)}.csv`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      } catch (e){ console.error('CSV export failed:', e); alert('Sorry, CSV export failed. See console for details.'); }
+    }
+  </script>
 </body>
 </html>
