@@ -51,36 +51,63 @@ module.exports = async function handler(req, res) {
       return res.status(403).json({ error: 'No client access for user: ' + userEmail });
     }
 
-    console.log('5. Making Notion API request (single page, 15 rows while testing)...');
+    console.log('5. Making Notion API request with pagination...');
 
-    const requestBody = {
-      page_size: 15, // testing limit
+    // Base request body used for each page
+    const baseRequestBody = {
+      page_size: 50,
       filter: {
         property: 'Client',
         select: { equals: clientName }
       }
     };
 
-    const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${NOTION_TOKEN}`,
-        'Notion-Version': '2022-06-28',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(requestBody)
-    });
+    // ---- Pagination loop (restored) ----
+    let allResults = [];
+    let hasMore = true;
+    let nextCursor = null;
+    let pageCount = 0;
 
-    console.log('Notion response status:', response.status);
+    while (hasMore && pageCount < 20) { // safety limit: 20 pages => up to 1000 rows
+      pageCount++;
+      const requestBody = { ...baseRequestBody };
+      if (nextCursor) requestBody.start_cursor = nextCursor;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Notion API error:', errorText);
-      return res.status(500).json({ error: `Notion API error: ${response.status}`, details: errorText });
+      console.log(`Fetching page ${pageCount}...`);
+      console.log(`Page ${pageCount} request body:`, JSON.stringify(requestBody, null, 2));
+
+      const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${NOTION_TOKEN}`,
+          'Notion-Version': '2022-06-28',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestBody)
+      });
+
+      console.log(`Page ${pageCount} response status:`, response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Notion API error on page ${pageCount}:`, errorText);
+        return res.status(500).json({
+          error: `Notion API error on page ${pageCount}: ${response.status}`,
+          details: errorText
+        });
+      }
+
+      const pageData = await response.json();
+      const pageResults = pageData.results || [];
+      console.log(`Page ${pageCount} retrieved:`, pageResults.length, 'records');
+
+      allResults = allResults.concat(pageResults);
+      hasMore = !!pageData.has_more;
+      nextCursor = pageData.next_cursor || null;
+
+      console.log(`Total records so far: ${allResults.length} | has_more: ${hasMore} | next_cursor: ${nextCursor}`);
     }
-
-    const pageData = await response.json();
-    const allResults = pageData.results || [];
+    // ---- End pagination loop ----
 
     console.log('6. Total records retrieved:', allResults.length);
 
