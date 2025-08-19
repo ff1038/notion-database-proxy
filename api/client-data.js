@@ -226,8 +226,11 @@ function getUniversalColumnConfig() {
 function getClientForUser(userEmail) {
   const userClientMap = {
     'nick@sayshey.com': 'King Ed',
-    'client.a@company.com': 'Client A',
-    'client.b@business.com': 'Client B'
+    'edcarlile@me.com': 'King Ed',
+    'lindenjaymusic@gmail.com': 'Linden Jay',
+    'willvrocks@gmail.com': 'Will Vaughan',
+    'talktotiggs@gmail.com': 'Tiggs',
+    'mrkieranbeardmore@gmail.com': 'Kieran "KES" Beardmore'
   };
   return userClientMap[(userEmail || '').toLowerCase()] || null;
 }
@@ -236,8 +239,11 @@ function verifySecureKey(userEmail, secureKey, timestamp) {
   try {
     const userSecureKeys = {
       'nick@sayshey.com': 'ke-' + Buffer.from('king-ed-2025').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
-      'client.a@company.com': 'ca-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
-      'client.b@business.com': 'cb-' + Buffer.from('client-b-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, '')
+      'edcarlile@me.com': 'ke-' + Buffer.from('king-ed-2025').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'lindenjaymusic@gmail.com': 'lj-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'willvrocks@gmail.com': 'wv-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'talktotiggs@gmail.com': 'nf-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
+      'mrkieranbeardmore@gmail.com': 'kb-' + Buffer.from('client-b-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, '')
     };
 
     const expectedKey = userSecureKeys[(userEmail || '').toLowerCase()];
