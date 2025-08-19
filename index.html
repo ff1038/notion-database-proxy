@@ -598,6 +598,49 @@ function getSortValue(prop){
   return getPlainValue(prop).toLowerCase();
 }
 
+  // ---- Helper: get a reliable vendor name for a record
+function getVendorName(rec) {
+  if (!rec || !rec.properties) return 'Unknown';
+
+  // 1) Try common keys in order
+  const candidates = ['Vendor1', 'Vendor', 'Vendor Name', 'Vendor/Label'];
+  for (const key of candidates) {
+    const p = rec.properties[key];
+    if (p) {
+      const txt =
+        // relation resolved by backend?
+        (p.relation_titles ? p.relation_titles :
+        // title or rich_text or select etc.
+        getPlainValue(p)).trim();
+      if (txt) return txt;
+    }
+  }
+
+  // 2) Try to find whichever property the backend mapped to display header "Vendor"
+  try {
+    const headers = currentData?.columnHeaders || {};
+    const keyForVendor = Object.keys(headers).find(k => headers[k] === 'Vendor');
+    if (keyForVendor) {
+      const p = rec.properties[keyForVendor];
+      const txt = (p?.relation_titles ? p.relation_titles : getPlainValue(p)).trim();
+      if (txt) return txt;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  // 3) Last resort: scan for the first property that looks like a vendor-ish text
+  for (const [k, p] of Object.entries(rec.properties)) {
+    const low = k.toLowerCase();
+    if (low.includes('vendor')) {
+      const txt = (p?.relation_titles ? p.relation_titles : getPlainValue(p)).trim();
+      if (txt) return txt;
+    }
+  }
+
+  return 'Unknown';
+}
+
 /* =================== SUMMARIES =================== */
 function updateSummaryBoxes(){
   const rows = filteredData || currentData?.results || [];
@@ -692,16 +735,29 @@ function updateCharts(){
   chCurrency.updateOptions({ labels:cLabels }, false, true);
   chCurrency.updateSeries(cSeries);
 
-  // Vendors (horizontal bar) – sum Net Amount per Vendor1 title
-  const vMap = {};
-  rows.forEach(r=>{
-    const n = r.properties?.['Net']?.number ?? r.properties?.['Net Amount']?.number ?? 0;
-    const v = (r.properties?.['Vendor1']?.title||[]).map(t=>t.plain_text).join('') || 'Unknown';
-    if (!n) return; vMap[v]=(vMap[v]||0)+n;
-  });
-  const vPairs = Object.entries(vMap).sort((a,b)=>b[1]-a[1]).slice(0,10).reverse();
-  chVendors.updateOptions({ xaxis:{ categories:vPairs.map(p=>p[0]), labels:{ formatter:(v)=> Number(v).toLocaleString('en-GB') } } }, false, true);
-  chVendors.updateSeries([{ name:'Net', data:vPairs.map(p=>+p[1].toFixed(2)) }]);
+ // Vendors (horizontal bar) – sum Net/Net Amount per resolved Vendor
+const vTotals = {};
+rows.forEach(r => {
+  const net = r.properties?.['Net']?.number ?? r.properties?.['Net Amount']?.number ?? 0;
+  if (!net) return;
+  const vendor = getVendorName(r) || 'Unknown';
+  vTotals[vendor] = (vTotals[vendor] || 0) + net;
+});
+
+// If we only have "Unknown" and nothing else, keep it;
+// otherwise drop pure "Unknown" bucket so real vendors show cleanly.
+let vEntries = Object.entries(vTotals);
+const nonUnknown = vEntries.filter(([name]) => name !== 'Unknown');
+if (nonUnknown.length) vEntries = nonUnknown;
+
+const top = vEntries.sort((a,b)=>b[1]-a[1]).slice(0, 10).reverse();
+chVendors.updateOptions({
+  xaxis: {
+    categories: top.map(([name]) => name),
+    labels: { formatter: (v) => Number(v).toLocaleString('en-GB') }
+  }
+}, false, true);
+chVendors.updateSeries([{ name: 'Net', data: top.map(([,val]) => +val.toFixed(2)) }]);
 
   // Income by Type (donut)
   const tMap = {};
