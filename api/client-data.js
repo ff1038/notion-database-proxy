@@ -55,7 +55,7 @@ module.exports = async function handler(req, res) {
 
     // Base request body used for each page
     const baseRequestBody = {
-      page_size: 50,
+      page_size: 20,
       filter: {
         property: 'Client',
         select: { equals: clientName }
@@ -68,7 +68,7 @@ module.exports = async function handler(req, res) {
     let nextCursor = null;
     let pageCount = 0;
 
-    while (hasMore && pageCount < 20) { // safety limit: 20 pages => up to 1000 rows
+    while (hasMore && pageCount < 3) { // safety limit: 20 pages => up to 1000 rows
       pageCount++;
       const requestBody = { ...baseRequestBody };
       if (nextCursor) requestBody.start_cursor = nextCursor;
