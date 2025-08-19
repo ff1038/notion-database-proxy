@@ -215,23 +215,32 @@ function verifySecureKey(userEmail, secureKey, timestamp) {
   try {
     const lower = (userEmail || '').toLowerCase();
 
-    // Map each client to the exact key the Wix page generates for that client
-    // (prefixes mirror your earlier scheme)
-    const clientKeyMap = {
-      'King Ed':               'ke-' + Buffer.from('king-ed-2025').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
-      'Linden Jay':            'lj-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
-      'Will Vaughan':          'wv-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
-      'Tiggs':                 'nf-' + Buffer.from('client-a-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, ''),
-      'Kieran "KES" Beardmore':'kb-' + Buffer.from('client-b-2024').toString('base64').replace(/[^a-zA-Z0-9]/g, '')
+    // Helper to build keys in one place
+    const makeKey = (prefix, seed) =>
+      prefix + Buffer.from(seed).toString('base64').replace(/[^a-zA-Z0-9]/g, '');
+
+    // For each client, list the accepted *seeds* (first is your new scheme; rest are legacy).
+    const CLIENT_KEY_DEFS = {
+      'King Ed':               { prefix: 'ke-', seeds: ['king-ed-2025'] },
+      'Linden Jay':           { prefix: 'lj-', seeds: ['linden-jay-2025', 'client-a-2024'] },
+      'Will Vaughan':         { prefix: 'wv-', seeds: ['will-vaughan-2025', 'client-a-2024'] },
+      'Tiggs':                { prefix: 'nf-', seeds: ['tiggs-2025', 'client-a-2024'] },
+      'Kieran "KES" Beardmore': { prefix: 'kb-', seeds: ['kieran-beardmore-2025', 'client-b-2024'] }
     };
 
-    // Map user → client (non-admin)
-    const userClient = getClientForUser(lower);
+    // Build a map of client -> Set(keys)
+    const clientToKeys = {};
+    for (const [client, def] of Object.entries(CLIENT_KEY_DEFS)) {
+      clientToKeys[client] = new Set(def.seeds.map(seed => makeKey(def.prefix, seed)));
+    }
 
-    // Admin?
-    const isAdmin = lower === 'nick@sayshey.com';
+    // Reverse lookup: which client (if any) does this secureKey belong to?
+    let clientFromKey = null;
+    for (const [client, keys] of Object.entries(clientToKeys)) {
+      if (keys.has(secureKey)) { clientFromKey = client; break; }
+    }
 
-    // Validate timestamp
+    // Validate timestamp window
     const now = Math.floor(Date.now() / 1000);
     const requestTime = parseInt(timestamp, 10);
     const drift = now - requestTime;
@@ -239,23 +248,18 @@ function verifySecureKey(userEmail, secureKey, timestamp) {
       return { ok: false, isAdmin: false, clientFromKey: null };
     }
 
-    // Reverse lookup: which client does this secureKey belong to?
-    let clientFromKey = null;
-    for (const [clientName, key] of Object.entries(clientKeyMap)) {
-      if (key === secureKey) { clientFromKey = clientName; break; }
-    }
-
+    // Admin can use any valid client page key
+    const isAdmin = lower === 'nick@sayshey.com';
     if (isAdmin) {
-      // Admin key must be one of the known *client page* keys
-      // (so the admin can load any client page, but not some random key)
       const ok = !!clientFromKey;
       return { ok, isAdmin: true, clientFromKey: ok ? clientFromKey : null };
     }
 
-    // Non-admin: secureKey must match the key of their mapped client
+    // Non-admin: secureKey must match the key for their mapped client
+    const userClient = getClientForUser(lower);
     if (!userClient) return { ok: false, isAdmin: false, clientFromKey: null };
-    const expectedKey = clientKeyMap[userClient];
-    const ok = (secureKey === expectedKey);
+
+    const ok = clientToKeys[userClient]?.has(secureKey) || false;
     return { ok, isAdmin: false, clientFromKey: ok ? userClient : null };
 
   } catch (err) {
