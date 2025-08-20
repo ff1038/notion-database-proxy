@@ -301,7 +301,9 @@ function makeMultiSelect(el, {label, options, selectedSet, onApply}){
         list.appendChild(row);
       });
   }
-  function updateCount(){ count.textContent = selectedSet.size ? \`(\${selectedSet.size})\` : ''; }
+ function updateCount(){
+  count.textContent = selectedSet.size ? `(${selectedSet.size})` : '';
+}
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.msel').forEach(x=>{ if(x!==el) x.classList.remove('open'); });
     el.classList.toggle('open'); renderList(); updateCount();
