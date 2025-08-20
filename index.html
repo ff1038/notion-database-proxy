@@ -281,10 +281,12 @@ function toggleVoidFilter(){
   applyFilters();
 }
 
-/* =================== MULTI-SELECT UI =================== */
+// =================== MULTI-SELECT UI ===================
 function makeMultiSelect(el, {label, options, selectedSet, onApply}){
   el.innerHTML = `
-    <button class="msel-btn" type="button"><span>${label}</span><span class="msel-count"></span>▾</button>
+    <button class="msel-btn" type="button">
+      <span>${label}</span><span class="msel-count"></span>▾
+    </button>
     <div class="msel-panel">
       <input class="msel-search" placeholder="Search…"/>
       <div class="msel-list"></div>
@@ -303,11 +305,11 @@ function makeMultiSelect(el, {label, options, selectedSet, onApply}){
   const clearB = el.querySelector('.msel-clear');
   const count  = el.querySelector('.msel-count');
 
-  // Force initial hidden state in case site CSS overrides
+  // keep closed by default (defensive against site CSS)
   panel.style.display = 'none';
 
   function setOpen(isOpen){
-    if (isOpen) {
+    if (isOpen){
       el.classList.add('open');
       panel.style.display = 'block';
     } else {
@@ -317,38 +319,44 @@ function makeMultiSelect(el, {label, options, selectedSet, onApply}){
   }
 
   function renderList(filter=''){
-    list.innerHTML='';
+    list.innerHTML = '';
     options
       .filter(o => !filter || o.toLowerCase().includes(filter.toLowerCase()))
       .forEach(o=>{
         const id = `${label}-${o}`.replace(/\s+/g,'_');
         const row = document.createElement('label');
-        row.className='msel-item';
+        row.className = 'msel-item';
         row.innerHTML = `
-          <input type="checkbox" id="${id}" ${selectedSet.has(o)?'checked':''}/>
+          <input type="checkbox" id="${id}" ${selectedSet.has(o) ? 'checked' : ''}/>
           <span>${o}</span>
         `;
+        // allow clicking the row to toggle the checkbox
         row.addEventListener('click', (e)=>{
           if (e.target.tagName !== 'INPUT'){
-            const cb = row.querySelector('input'); cb.checked = !cb.checked;
+            const cb = row.querySelector('input');
+            cb.checked = !cb.checked;
           }
         });
         list.appendChild(row);
       });
   }
 
-  function updateCount(){ count.textContent = selectedSet.size ? `(${selectedSet.size})` : ''; }
+  function updateCount(){
+    count.textContent = selectedSet.size ? `(${selectedSet.size})` : '';
+  }
 
-  btn.addEventListener('click', ()=>{
-    const isOpen = !el.classList.contains('open');
+  btn.addEventListener('click', (e)=>{
+    e.stopPropagation();
     renderList(); updateCount();
-    setOpen(isOpen);
+    setOpen(!el.classList.contains('open'));
   });
 
   srch.addEventListener('input', ()=>renderList(srch.value));
 
   clearB.addEventListener('click', ()=>{
-    selectedSet.clear(); renderList(srch.value); updateCount();
+    selectedSet.clear();
+    renderList(srch.value);
+    updateCount();
   });
 
   applyB.addEventListener('click', ()=>{
@@ -362,34 +370,16 @@ function makeMultiSelect(el, {label, options, selectedSet, onApply}){
     onApply && onApply();
   });
 
-  // Close when clicking outside
+  // close when clicking outside
   document.addEventListener('click', (e)=>{
     if (!el.contains(e.target)) setOpen(false);
   });
 
-  renderList(); updateCount();
+  // initial paint
+  renderList();
+  updateCount();
 }
-
- function updateCount(){
-  count.textContent = selectedSet.size ? `(${selectedSet.size})` : '';
-}
-  btn.addEventListener('click', ()=>{
-    document.querySelectorAll('.msel').forEach(x=>{ if(x!==el) x.classList.remove('open'); });
-    el.classList.toggle('open'); renderList(); updateCount();
-  });
-  srch.addEventListener('input', ()=>renderList(srch.value));
-  clearB.addEventListener('click', ()=>{ selectedSet.clear(); renderList(srch.value); updateCount(); });
-  applyB.addEventListener('click', ()=>{
-    selectedSet.clear();
-    list.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-      const text = cb.parentElement.querySelector('span').textContent;
-      if (cb.checked) selectedSet.add(text);
-    });
-    updateCount(); el.classList.remove('open'); onApply && onApply();
-  });
-  document.addEventListener('click', (e)=>{ if (!el.contains(e.target)) el.classList.remove('open'); });
-  renderList(); updateCount();
-
+  
 /* =================== SEARCH =================== */
 document.addEventListener('DOMContentLoaded', ()=>{
   document.getElementById('searchBox').addEventListener('input', applyFilters);
