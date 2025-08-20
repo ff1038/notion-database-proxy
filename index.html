@@ -449,28 +449,55 @@ document.addEventListener('DOMContentLoaded', ()=>{
 
 /* =================== DATA LOAD =================== */
 window.addEventListener('load', ()=>{
-  const url = new URLSearchParams(location.search);
-  const email = url.get('userEmail'); const key = url.get('secureKey'); const ts = url.get('timestamp');
-  if (!email){ showError('No user specified.'); return; }
-  currentUserEmail = email; document.getElementById('userEmail').textContent=email;
-  loadData(email,key,ts);
+  const qs     = new URLSearchParams(location.search);
+  const email  = qs.get('userEmail') || '';          // now optional
+  const key    = qs.get('secureKey');               // required
+  const ts     = qs.get('timestamp');               // required
+  const client = qs.get('client') || '';            // optional
+
+  // show an identity if provided; otherwise show "Member"
+  const emailEl = document.getElementById('userEmail');
+  if (emailEl) emailEl.textContent = email || 'Member';
+
+  // soft validation: only require the auth params
+  if (!key || !ts){
+    showError('Missing access parameters.'); 
+    return;
+  }
+
+  currentUserEmail = email;    // optional, for display/export filename etc.
+  loadData({ secureKey: key, timestamp: ts, client });
 });
 
-async function loadData(userEmail, secureKey, timestamp){
+async function loadData({ secureKey, timestamp, client = '' }){
   const tableContent = document.getElementById('tableContent');
   tableContent.innerHTML = '<div class="loading">Verifying access and loading your data…</div>';
+
   try{
-    const apiUrl = `/api/client-data?userEmail=${encodeURIComponent(userEmail)}&secureKey=${secureKey}&timestamp=${timestamp}`;
-    const resp = await fetch(apiUrl, {headers:{'Accept':'application/json','Cache-Control':'no-cache'}});
+    const params = new URLSearchParams({
+      secureKey,
+      timestamp: String(timestamp)
+    });
+    if (client) params.set('client', client);
+    // pass email only if present (not required by API anymore)
+    if (currentUserEmail) params.set('userEmail', currentUserEmail);
+
+    const apiUrl = `/api/client-data?${params.toString()}`;
+
+    const resp = await fetch(apiUrl, { headers:{ 'Accept':'application/json','Cache-Control':'no-cache' }});
     if (!resp.ok){
-      let msg=`Access denied: ${resp.status}`; try{ const e=await resp.json(); msg=e.error||msg; }catch{}
+      let msg = `Access denied: ${resp.status}`;
+      try { const e = await resp.json(); msg = e.error || msg; } catch {}
       throw new Error(msg);
     }
+
     const data = await resp.json();
     const cd = document.getElementById('clientDisplay');
     if (data.authorizedClient && cd) cd.textContent = `${data.authorizedClient} Dashboard`;
+
     currentData = data;
 
+    // (re)build multiselects, then render
     makeMultiSelect(document.getElementById('msIncomeType'),{
       label:'Income Types',
       options:[...(data.metadata?.incomeTypes || [])],
@@ -486,7 +513,10 @@ async function loadData(userEmail, secureKey, timestamp){
 
     applyFilters();
     switchTab('table');
-  }catch(e){ console.error(e); showError(`Access Denied: ${e.message}`); }
+  }catch(e){
+    console.error(e);
+    showError(`Access Denied: ${e.message}`);
+  }
 }
 
   /* ===== UK Tax Year (dropdown) ===== */
