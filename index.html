@@ -30,6 +30,13 @@
   .hdr-menu.open .hdr-dd{display:block}
   .hdr-dd a{display:block;padding:10px 12px;text-decoration:none;color:#1f2330;font-size:13px}
   .hdr-dd a:hover{background:#f6f7fb}
+  /* Disabled items in header dropdown */
+.hdr-dd a.disabled{
+  color:#9aa3b2;
+  pointer-events:none;
+  cursor:not-allowed;
+  opacity:.6;
+}
 
   .page{padding:16px 20px 20px}
 
@@ -114,10 +121,10 @@
           <span>▾</span>
         </button>
         <div class="hdr-dd" onclick="document.getElementById('hdrMenu').classList.remove('open')">
-          <a href="#" id="linkFinance">Finance Dashboard</a>
-          Agreement Tracker
-          Royalty Tracker
-        </div>
+  <a href="#" id="linkFinance">Finance Dashboard</a>
+  <a href="#" id="linkAgreement" class="disabled" aria-disabled="true" title="Coming soon">Agreement Tracker</a>
+  <a href="#" id="linkRoyalty" class="disabled" aria-disabled="true" title="Coming soon">Royalty Tracker</a>
+</div>
       </div>
     </div>
   </div>
