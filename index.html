@@ -57,72 +57,86 @@
   .tab-btn.active{background:#2f2e41;color:#fff;border-color:#2f2e41}
 
   /* Table */
-  .card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
+  .card{
+    background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);
+    /* allow tooltips to overflow the card */
+    overflow: visible;
+  }
   .table-wrapper{
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y pinch-zoom; /* prevent swipe-to-back */
   }
- /* --- TABLE + HEADERS --- */
-table{
-  width:100%;
-  border-collapse:collapse;
-  table-layout:fixed;         /* keeps a predictable grid */
-  font-size:12px;
-}
+
+  /* --- TABLE + HEADERS --- */
+  table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;         /* keeps a predictable grid */
+    font-size:12px;
+  }
+
+  /* Let tooltips overflow out of cells/rows/thead */
+  .table-wrapper table,
+  .table-wrapper thead,
+  .table-wrapper tr,
+  .table-wrapper th,
+  .table-wrapper td { overflow: visible; }
+
+  /* Sticky header container on top of content and tooltips */
+  .table-wrapper thead{ position: sticky; top: 0; z-index: 5; }
 
   /* Always box-size cells and allow wrapping inside headers */
-th, td { box-sizing: border-box; overflow: visible !important; }
+  th, td { box-sizing: border-box; }
   
-th{
-  position:sticky; top:0;
-  background:#f6f7fb;
-  border-bottom:2px solid #e5e7f1;
-  font-weight:600;
-  padding:8px 12px;
-  vertical-align:bottom;
+  th{
+    background:#f6f7fb;
+    border-bottom:2px solid #e5e7f1;
+    font-weight:600;
+    padding:8px 12px;
+    vertical-align:bottom;
 
-  /* allow wrapping and prevent overflow into neighbors */
-  white-space:normal;
-  overflow-wrap:anywhere;     /* ✅ let long labels wrap cleanly */
-  word-break:break-word;
-  line-height:1.15;
-}
-td{
-  border-bottom:1px solid #eef0f5;
-  padding:12px;
-  vertical-align:top;
-}
+    /* allow wrapping and prevent overflow into neighbors */
+    white-space:normal;
+    overflow-wrap:anywhere;     /* ✅ let long labels wrap cleanly */
+    word-break:break-word;
+    line-height:1.15;
+  }
+  td{
+    border-bottom:1px solid #eef0f5;
+    padding:12px;
+    vertical-align:top;
+  }
 
-/* --- COLUMN HELPERS (apply to *both* th and td) --- */
+  /* --- COLUMN HELPERS (apply to *both* th and td) --- */
 
-/* 1) Headers fully visible + fix overlap on Date / Inv# by giving them min width */
-.col-date{ min-width: 13ch; }      /* Date (Inv/Stmt) */
-.col-inv { min-width: 8ch;  }      /* Inv # */
+  /* 1) Headers fully visible + fix overlap on Date / Inv# by giving them min width */
+  .col-date{ min-width: 14ch; }      /* Date (Inv/Stmt) */
+  .col-inv { min-width: 8ch;  }      /* Inv # */
 
-/* 2) Narrow the Income Type column (let header/data wrap) */
-.col-income-type{ width: 14ch; }   /* wraps by default */
+  /* 2) Narrow the Income Type column (let header/data wrap) */
+  .col-income-type{ width: 14ch; }   /* wraps by default */
 
-/* Currency columns: allow header to wrap, but widen a touch so it's readable */
-.col-currency {
-  width: 10ch;                 /* was 7.5ch; gives header 2–3 lines comfortably */
-  text-align: center;
-  white-space: nowrap;         /* data stays 3-letter tag on one line */
-}
+  /* Currency columns: allow header to wrap, but widen a touch so it's readable */
+  .col-currency {
+    width: 10ch;                 /* gives header 2–3 lines comfortably */
+    text-align: center;
+    white-space: nowrap;         /* data stays 3-letter tag on one line */
+  }
 
-/* 4) Numbers: never wrap + right-aligned + a safe min-width */
-.num-col{
-  white-space:nowrap;              /* ✅ never wrap numbers */
-  text-align:right;
-  min-width: 9ch;                  /* prevents forced wrapping in fixed layout */
-  font-variant-numeric: tabular-nums;
-}
+  /* 4) Numbers: never wrap + right-aligned + a safe min-width */
+  .num-col{
+    white-space:nowrap;              /* ✅ never wrap numbers */
+    text-align:right;
+    min-width: 9ch;                  /* prevents forced wrapping in fixed layout */
+    font-variant-numeric: tabular-nums;
+  }
 
-/* Vendor + Description: give room so they never overlap */
-.col-vendor { min-width: 18ch; }
+  /* Vendor + Description: give room so they never overlap */
+  .col-vendor { min-width: 18ch; }
 
-/* Optional: a reasonable description width that can wrap nicely */
-.col-desc   { width: 32ch; overflow-wrap:anywhere; hyphens:auto; }
+  /* Optional: a reasonable description width that can wrap nicely */
+  .col-desc   { width: 32ch; overflow-wrap:anywhere; hyphens:auto; }
 
   /* Pills can wrap normally */
   .tag{padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;display:inline-block;white-space:normal}
@@ -176,38 +190,47 @@ td{
   .loading{padding:60px;text-align:center;color:#6e7587}
   .error{padding:40px;margin:20px;background:#fde9ec;border:1px solid #f7c9d1;border-radius:12px;color:#8d2a3b;text-align:center}
 
-  /* Tooltip styling */
-th span[data-tip] {
-  position: relative;
-  cursor: help; /* indicates "hover for info" */
-}
-
-th span[data-tip]::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: 120%; /* show above header */
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1f2330;
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  line-height: 1.3;
-  white-space: normal;
-  width: max-content;
-  max-width: 220px;
-  text-align: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease;
-  box-shadow: 0 4px 12px rgba(0,0,0,.2);
-  z-index: 50;
-}
-
-th span[data-tip]:hover::after {
-  opacity: 1;
-}
+  /* Tooltip styling (for header labels) */
+  th span[data-tip]{
+    position: relative;
+    cursor: help; /* indicates "hover for info" */
+  }
+  th span[data-tip]::after{
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 10px);   /* show above header */
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0f172a;
+    color: #fff;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-size: 11px;
+    line-height: 1.3;
+    white-space: normal;
+    width: max-content;
+    max-width: 260px;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+    z-index: 9999;              /* above sticky header/content */
+  }
+  th span[data-tip]::before{
+    content: "";
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: #0f172a;  /* little arrow */
+    opacity: 0;
+    transition: opacity .18s ease;
+    z-index: 9999;
+  }
+  th span[data-tip]:hover::after,
+  th span[data-tip]:hover::before{ opacity: 1; }
 </style>
 </head>
 <body>
@@ -258,6 +281,8 @@ th span[data-tip]:hover::after {
         <button class="tab-btn active" id="tabTable"  onclick="switchTab('table')">📊 Table</button>
         <button class="tab-btn" id="tabCharts" onclick="switchTab('charts')">📈 Charts</button>
       </div>     
+
+      <div class="spacer"></div> 
       
       <button class="filter-btn active" onclick="applyDateFilter('all',event)">All Time</button>
       <button class="filter-btn" onclick="applyDateFilter('30',event)">Last 30 Days</button>
@@ -509,21 +534,20 @@ function getUKTaxYearRange(year) {
 
 function getColMeta(col){
   switch (col) {
-    case 'Invoice date': return { cls: 'col-date col-nowrap', tip: 'Date of the invoice or statement' };
-    case 'Inv #': return { cls: 'col-inv col-nowrap', tip: 'Invoice number, if available' };
-    case 'Vendor': return { cls: 'col-vendor', tip: 'Vendor / Label / Payer' };
-    case 'Description': return { cls: 'col-desc', tip: 'Description of royalty or payment' };
-    case 'Income Type': return { cls: 'col-income-type', tip: 'Category of income (e.g. Master, Publishing)' };
-    case 'Currency (Inv/Stmt)': return { cls: 'col-currency', tip: 'Currency reported on the invoice or statement' };
+    case 'Invoice date': return { cls: 'col-date col-nowrap', tip: 'Date of the Invoice or Statement' };
+    case 'Inv #': return { cls: 'col-inv col-nowrap', tip: 'Invoice number' };
+    case 'Vendor1': return { cls: 'col-vendor', tip: 'Vendor / Label / Payer' };
+    case 'Description': return { cls: 'col-desc', tip: 'Description' };
+    case 'Income Type': return { cls: 'col-income-type', tip: 'Category of Income (e.g. Master, Publishing)' };
     case 'Currency (receipt)': return { cls: 'col-currency', tip: 'Currency actually received' };
-    case 'Currency': return { cls: 'col-currency', tip: 'Currency used for this record' };
-    case 'Net': return { cls: 'num-col', tip: 'Net amount (after deductions)' };
-    case 'Gross': return { cls: 'num-col', tip: 'Gross amount (before deductions)' };
+    case 'Currency': return { cls: 'col-currency', tip: 'Currency on the Invoice or Statement' };
+    case 'Net': return { cls: 'num-col', tip: 'Net amount invoiced/on the statement pre tax' };
+    case 'Gross': return { cls: 'num-col', tip: 'Gross amount (inc. VAT/GST)' };
     case 'Amount Received': return { cls: 'num-col', tip: 'Actual amount received' };
-    case 'Adjustments': return { cls: 'num-col', tip: 'Adjustments applied' };
-    case 'Net Commissionable': return { cls: 'num-col', tip: 'Net commissionable value' };
-    case 'Mgmt Commission': return { cls: 'num-col', tip: 'Management commission amount' };
-    case 'Commission %': return { cls: 'num-col', tip: 'Commission percentage' };
+    case 'Adjustments': return { cls: 'num-col', tip: 'Adjustments applied to commissionable amount' };
+    case 'Net Commissionable': return { cls: 'num-col', tip: 'Net commissioned amount' };
+    case 'Mgmt Commission': return { cls: 'num-col', tip: 'Management commission charged' };
+    case 'Commission %': return { cls: 'num-col', tip: 'Commission percentage applied' };
     case 'Mgmt Inv #': return { cls: 'col-nowrap', tip: 'Management invoice number' };
     default: return { cls: '', tip: '' };
   }
