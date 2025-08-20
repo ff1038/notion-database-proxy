@@ -103,6 +103,27 @@
   .tag.yellow{background:#fff8d6;color:#8c6d00}
   .tag.gray{background:#ecf0f3;color:#54616d}
   .tag.gold{background:#fff4d6;color:#a37500}
+
+/* Multi-select dropdown */
+.msel { position:relative }
+.msel-btn{
+  display:flex;align-items:center;gap:6px;
+  border:1px solid #e0e3ea;background:#fff;border-radius:8px;
+  padding:6px 10px;font-size:12px;cursor:pointer
+}
+/* Force hidden by default, even against site CSS */
+.msel-panel{
+  position:absolute;top:110%;left:0;z-index:20;background:#fff;
+  border:1px solid #e0e3ea;border-radius:10px;width:260px;
+  box-shadow:0 10px 30px rgba(24,27,51,.12);padding:8px;
+  display:none !important;                 /* <-- key line */
+  pointer-events:none;                      /* avoid stray focus */
+}
+.msel.open .msel-panel{
+  display:block !important;                 /* <-- key line */
+  pointer-events:auto;
+}
+  
 </style>
 </head>
 <body>
@@ -273,6 +294,7 @@ function makeMultiSelect(el, {label, options, selectedSet, onApply}){
       </div>
     </div>
   `;
+
   const btn    = el.querySelector('.msel-btn');
   const panel  = el.querySelector('.msel-panel');
   const list   = el.querySelector('.msel-list');
@@ -280,6 +302,19 @@ function makeMultiSelect(el, {label, options, selectedSet, onApply}){
   const applyB = el.querySelector('.msel-apply');
   const clearB = el.querySelector('.msel-clear');
   const count  = el.querySelector('.msel-count');
+
+  // Force initial hidden state in case site CSS overrides
+  panel.style.display = 'none';
+
+  function setOpen(isOpen){
+    if (isOpen) {
+      el.classList.add('open');
+      panel.style.display = 'block';
+    } else {
+      el.classList.remove('open');
+      panel.style.display = 'none';
+    }
+  }
 
   function renderList(filter=''){
     list.innerHTML='';
@@ -301,6 +336,40 @@ function makeMultiSelect(el, {label, options, selectedSet, onApply}){
         list.appendChild(row);
       });
   }
+
+  function updateCount(){ count.textContent = selectedSet.size ? `(${selectedSet.size})` : ''; }
+
+  btn.addEventListener('click', ()=>{
+    const isOpen = !el.classList.contains('open');
+    renderList(); updateCount();
+    setOpen(isOpen);
+  });
+
+  srch.addEventListener('input', ()=>renderList(srch.value));
+
+  clearB.addEventListener('click', ()=>{
+    selectedSet.clear(); renderList(srch.value); updateCount();
+  });
+
+  applyB.addEventListener('click', ()=>{
+    selectedSet.clear();
+    list.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+      const text = cb.parentElement.querySelector('span').textContent;
+      if (cb.checked) selectedSet.add(text);
+    });
+    updateCount();
+    setOpen(false);
+    onApply && onApply();
+  });
+
+  // Close when clicking outside
+  document.addEventListener('click', (e)=>{
+    if (!el.contains(e.target)) setOpen(false);
+  });
+
+  renderList(); updateCount();
+}
+
  function updateCount(){
   count.textContent = selectedSet.size ? `(${selectedSet.size})` : '';
 }
@@ -633,6 +702,41 @@ function updateSummaryBoxes(){
   if (unpaidEl) unpaidEl.textContent = line(unpaidBy);
 }
 
+  /* ---------- Helper: get a reliable vendor name for a record ---------- */
+function getVendorName(rec) {
+  if (!rec || !rec.properties) return 'Unknown';
+
+  // 1) Try common keys in order
+  const candidates = ['Vendor1', 'Vendor', 'Vendor Name', 'Vendor/Label'];
+  for (const key of candidates) {
+    const p = rec.properties[key];
+    if (p) {
+      const txt = (p.relation_titles ? p.relation_titles : getPlainValue(p)).trim();
+      if (txt) return txt;
+    }
+  }
+
+  // 2) Try the property whose header the backend mapped to "Vendor"
+  try {
+    const headers = currentData?.columnHeaders || {};
+    const keyForVendor = Object.keys(headers).find(k => headers[k] === 'Vendor');
+    if (keyForVendor) {
+      const p = rec.properties[keyForVendor];
+      const txt = (p?.relation_titles ? p.relation_titles : getPlainValue(p)).trim();
+      if (txt) return txt;
+    }
+  } catch (_) {}
+
+  // 3) Last resort: any property name containing "vendor"
+  for (const [k, p] of Object.entries(rec.properties)) {
+    if (k.toLowerCase().includes('vendor')) {
+      const txt = (p?.relation_titles ? p.relation_titles : getPlainValue(p)).trim();
+      if (txt) return txt;
+    }
+  }
+
+  return 'Unknown';
+}
 /* =================== CHARTS (unchanged core) =================== */
 let chMonthly=null, chCurrency=null, chVendors=null, chType=null;
 function ensureCharts(){
