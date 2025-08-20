@@ -14,55 +14,48 @@ module.exports = async function handler(req, res) {
     const NOTION_TOKEN = process.env.NOTION_TOKEN;
     const DATABASE_ID = process.env.NOTION_DATABASE_ID;
     if (!NOTION_TOKEN || !DATABASE_ID) {
-      return res.status(500).json({ error: "Server configuration error - missing environment variables" });
+      return res
+        .status(500)
+        .json({ error: "Server configuration error - missing environment variables" });
     }
 
     // ---- Query params
     const {
-      userEmail,
+      userEmail = null, // optional now, kept for logging
       secureKey,
       timestamp,
       client: clientParam,
       // perf switches
-      fast = "1",                 // ?fast=1 disables relation walk (default on)
-      maxPages = "10",            // pagination safety
-      pageSize = "100",           // Notion page_size
+      fast = "1", // ?fast=1 disables relation walk (default on)
+      maxPages = "10", // pagination safety
+      pageSize = "100", // Notion page_size
     } = req.query || {};
 
-    if (!userEmail || !secureKey || !timestamp) {
-      return res.status(401).json({ error: "Missing authentication parameters" });
+    if (!secureKey || !timestamp) {
+      return res
+        .status(401)
+        .json({ error: "Missing authentication parameters" });
     }
 
     // ---- Auth
-    const { ok, isAdmin, clientFromKey } = verifySecureKey(userEmail, secureKey, timestamp);
+    const { ok, isAdmin, clientFromKey } = verifySecureKey(secureKey, timestamp);
     if (!ok) return res.status(401).json({ error: "Invalid access credentials" });
 
     // Which client are we allowed to load?
     let clientName = null;
-    const userMappedClient = getClientForUser(userEmail);
     const clean = (s) => (s || "").trim();
 
+    if (!clientFromKey) {
+      return res.status(401).json({ error: "Key not recognized" });
+    }
+
     if (clean(clientParam)) {
-      if (isAdmin) {
-        clientName = clean(clientParam);
-      } else {
-        if (clean(clientParam) !== userMappedClient) {
-          return res.status(403).json({ error: "Client access denied for user" });
-        }
-        clientName = userMappedClient;
+      if (clean(clientParam) !== clientFromKey) {
+        return res.status(403).json({ error: "Client/key mismatch" });
       }
-    } else if (clientFromKey) {
-      clientName = clientFromKey;
-      if (!isAdmin && userMappedClient && clientName !== userMappedClient) {
-        return res.status(403).json({ error: "Client access denied for user" });
-      }
+      clientName = clean(clientParam);
     } else {
-      if (!isAdmin) {
-        if (!userMappedClient) return res.status(403).json({ error: "No client access for user" });
-        clientName = userMappedClient;
-      } else {
-        return res.status(400).json({ error: "Admin access requires client context (add ?client=...)" });
-      }
+      clientName = clientFromKey;
     }
 
     console.log("Resolved ⇒ isAdmin:", isAdmin, "| clientName:", clientName);
@@ -104,11 +97,19 @@ module.exports = async function handler(req, res) {
       const requestBody = { ...baseRequestBody };
       if (nextCursor) requestBody.start_cursor = nextCursor;
 
-      console.log(`[Notion] Query page ${pageCount}/${safeMaxPages} | start_cursor=${nextCursor || "∅"}`);
+      console.log(
+        `[Notion] Query page ${pageCount}/${safeMaxPages} | start_cursor=${
+          nextCursor || "∅"
+        }`
+      );
 
       const resp = await fetchWithTimeout(
         `https://api.notion.com/v1/databases/${DATABASE_ID}/query`,
-        { method: "POST", headers: notionHeaders, body: JSON.stringify(requestBody) },
+        {
+          method: "POST",
+          headers: notionHeaders,
+          body: JSON.stringify(requestBody),
+        },
         15000
       );
 
@@ -126,17 +127,28 @@ module.exports = async function handler(req, res) {
       hasMore = !!data.has_more;
       nextCursor = data.next_cursor || null;
 
-      console.log(`[Notion] Page ${pageCount} → +${results.length} (total ${allResults.length}) | has_more=${hasMore}`);
+      console.log(
+        `[Notion] Page ${pageCount} → +${results.length} (total ${
+          allResults.length
+        }) | has_more=${hasMore}`
+      );
     }
 
     // ==== Optional/whitelisted relation resolution (cached, capped) ====
     const doRelations = fast !== "1"; // default OFF unless fast=0
-    const RELATION_WHITELIST = new Set(["Vendor1", "Vendor", "Vendor Name", "Vendor/Label"]);
+    const RELATION_WHITELIST = new Set([
+      "Vendor1",
+      "Vendor",
+      "Vendor Name",
+      "Vendor/Label",
+    ]);
     const RELATION_CAP = 150; // hard cap to avoid long tail
     const relationCache = new Map(); // pageId -> title
 
     if (doRelations && allResults.length) {
-      console.log(`[Relations] Resolving enabled (whitelist ${RELATION_WHITELIST.size} keys, cap=${RELATION_CAP})`);
+      console.log(
+        `[Relations] Resolving enabled (whitelist ${RELATION_WHITELIST.size} keys, cap=${RELATION_CAP})`
+      );
 
       let hits = 0;
       for (let i = 0; i < allResults.length; i++) {
@@ -167,7 +179,9 @@ module.exports = async function handler(req, res) {
 
             if (pageResp.ok) {
               const relPage = await pageResp.json();
-              const titleProp = Object.values(relPage.properties || {}).find((p) => p.type === "title");
+              const titleProp = Object.values(relPage.properties || {}).find(
+                (p) => p.type === "title"
+              );
               const title = titleProp?.title?.[0]?.plain_text || "";
               if (title) {
                 relationCache.set(firstId, title);
@@ -177,13 +191,17 @@ module.exports = async function handler(req, res) {
             // small breather to avoid bursts
             if (hits % 8 === 0) await sleep(80);
           } catch (e) {
-            // (Fixed the previous syntax error here by switching to a template literal)
-            console.error(`Relation fetch error for ${key}:`, (e && e.message) ? e.message : e);
+            console.error(
+              `Relation fetch error for ${key}:`,
+              e && e.message ? e.message : e
+            );
           }
         }
         if (hits >= RELATION_CAP) break;
       }
-      console.log(`[Relations] Resolved count: ${hits} | cache size: ${relationCache.size}`);
+      console.log(
+        `[Relations] Resolved count: ${hits} | cache size: ${relationCache.size}`
+      );
     } else {
       console.log("[Relations] Skipped (fast=1 or no results).");
     }
@@ -194,8 +212,8 @@ module.exports = async function handler(req, res) {
     const respPayload = {
       results: allResults,
       authorizedClient: clientName,
-      userEmail,
-      isAdmin,
+      userEmail, // optional, for logging
+      isAdmin, // always false in key-only mode
       columnOrder: columnConfig.columns,
       columnHeaders: columnConfig.columnHeaders,
       debug: {
@@ -206,17 +224,27 @@ module.exports = async function handler(req, res) {
         durationMs: Date.now() - t0,
       },
       metadata: {
-        incomeTypes: uniq(allResults.map((r) => r?.properties?.["Income Type"]?.select?.name)),
-        currencies: uniq(
-          allResults
-            .map((r) => r?.properties?.["Currency (Inv/Stmt)"]?.select?.name || r?.properties?.["Currency"]?.select?.name)
+        incomeTypes: uniq(
+          allResults.map((r) => r?.properties?.["Income Type"]?.select?.name)
         ),
-        // also expose receipt currency if you want to wire a 3rd dropdown later
-        receiptCurrencies: uniq(allResults.map((r) => r?.properties?.["Currency (receipt)"]?.select?.name)),
+        currencies: uniq(
+          allResults.map(
+            (r) =>
+              r?.properties?.["Currency (Inv/Stmt)"]?.select?.name ||
+              r?.properties?.["Currency"]?.select?.name
+          )
+        ),
+        receiptCurrencies: uniq(
+          allResults.map(
+            (r) => r?.properties?.["Currency (receipt)"]?.select?.name
+          )
+        ),
       },
     };
 
-    console.log(`=== API HANDLER SUCCESS (${respPayload.debug.recordCount} rows in ${respPayload.debug.durationMs}ms) ===`);
+    console.log(
+      `=== API HANDLER SUCCESS (${respPayload.debug.recordCount} rows in ${respPayload.debug.durationMs}ms) ===`
+    );
     return res.status(200).json(respPayload);
   } catch (error) {
     console.error("=== API HANDLER ERROR ===", error?.message || error);
@@ -279,40 +307,36 @@ function getUniversalColumnConfig() {
   };
 }
 
-// Non-admin fixed mapping
-function getClientForUser(userEmail) {
-  const map = {
-    "edcarlile@me.com": "King Ed",
-    "lindenjaymusic@gmail.com": "Linden Jay",
-    "willvrocks@gmail.com": "Will Vaughan",
-    "talktotiggs@gmail.com": "Tiggs",
-    "mrkieranbeardmore@gmail.com": 'Kieran "KES" Beardmore',
-  };
-  return map[(userEmail || "").toLowerCase()] || null;
-}
-
 /**
  * verifySecureKey
- *  - Non-admin: secureKey must match their client’s accepted keys.
- *  - Admin (nick@sayshey.com): secureKey may match any client key.
- * Returns { ok, isAdmin, clientFromKey }.
+ *  - secureKey must match a known client key
+ *  - timestamp must be within ±1h
+ * Returns { ok, isAdmin, clientFromKey }
  */
-function verifySecureKey(userEmail, secureKey, timestamp) {
+function verifySecureKey(secureKey, timestamp) {
   try {
-    const lower = (userEmail || "").toLowerCase();
-    const makeKey = (prefix, seed) => prefix + Buffer.from(seed).toString("base64").replace(/[^a-zA-Z0-9]/g, "");
+    const makeKey = (prefix, seed) =>
+      prefix +
+      Buffer.from(seed)
+        .toString("base64")
+        .replace(/[^a-zA-Z0-9]/g, "");
 
     const CLIENT_KEY_DEFS = {
       "King Ed": { prefix: "ke-", seeds: ["king-ed-2025"] },
       "Linden Jay": { prefix: "lj-", seeds: ["linden-jay-2025", "client-a-2024"] },
       "Will Vaughan": { prefix: "wv-", seeds: ["will-vaughan-2025", "client-a-2024"] },
       Tiggs: { prefix: "nf-", seeds: ["tiggs-2025", "client-a-2024"] },
-      'Kieran "KES" Beardmore': { prefix: "kb-", seeds: ["kieran-beardmore-2025", "client-b-2024"] },
+      'Kieran "KES" Beardmore': {
+        prefix: "kb-",
+        seeds: ["kieran-beardmore-2025", "client-b-2024"],
+      },
     };
 
     const clientToKeys = {};
     for (const [client, def] of Object.entries(CLIENT_KEY_DEFS)) {
-      clientToKeys[client] = new Set(def.seeds.map((seed) => makeKey(def.prefix, seed)));
+      clientToKeys[client] = new Set(
+        def.seeds.map((seed) => makeKey(def.prefix, seed))
+      );
     }
 
     // timestamp window
@@ -332,17 +356,7 @@ function verifySecureKey(userEmail, secureKey, timestamp) {
       }
     }
 
-    const isAdmin = lower === "nick@sayshey.com";
-    if (isAdmin) {
-      const ok = !!clientFromKey;
-      return { ok, isAdmin: true, clientFromKey: ok ? clientFromKey : null };
-    }
-
-    const userClient = getClientForUser(lower);
-    if (!userClient) return { ok: false, isAdmin: false, clientFromKey: null };
-
-    const ok = clientToKeys[userClient]?.has(secureKey) || false;
-    return { ok, isAdmin: false, clientFromKey: ok ? userClient : null };
+    return { ok: !!clientFromKey, isAdmin: false, clientFromKey };
   } catch (e) {
     console.error("Secure key verification error:", e?.message || e);
     return { ok: false, isAdmin: false, clientFromKey: null };
