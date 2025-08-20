@@ -15,7 +15,7 @@
   .dashboard-header{
     display:flex;align-items:center;justify-content:space-between;
     background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-    color:#fff;padding:6px 10px;margin:0 0 8px 0; /* tighter gap ↓ */
+    color:#fff;padding:6px 10px;margin:0 0 8px 0;
   }
   .secure-chip{display:flex;gap:6px;align-items:center;white-space:nowrap;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);font-size:13px;}
   .hdr-right{display:flex;align-items:center;gap:8px}
@@ -30,13 +30,7 @@
   .hdr-menu.open .hdr-dd{display:block}
   .hdr-dd a{display:block;padding:10px 12px;text-decoration:none;color:#1f2330;font-size:13px}
   .hdr-dd a:hover{background:#f6f7fb}
-  /* Disabled items in header dropdown */
-.hdr-dd a.disabled{
-  color:#9aa3b2;
-  pointer-events:none;
-  cursor:not-allowed;
-  opacity:.6;
-}
+  .hdr-dd a.disabled{color:#9aa3b2;pointer-events:none;cursor:not-allowed;opacity:.6;}
 
   .page{padding:16px 20px 20px}
 
@@ -58,62 +52,37 @@
   .export-btn{background:#2fbf71;color:#fff;border:none;border-radius:8px;padding:9px 14px;cursor:pointer}
   .spacer{flex:1}
   #recordCount{color:#6e7587;font-size:14px}
-
-  /* Tabs (now inside toolbar, right-aligned) */
   .tabs{display:flex;gap:10px;margin-left:6px}
   .tab-btn{background:#fff;border:1px solid #e0e3ea;border-radius:999px;padding:6px 14px;cursor:pointer}
   .tab-btn.active{background:#2f2e41;color:#fff;border-color:#2f2e41}
 
   /* Table */
   .card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
-  .table-wrapper{overflow:auto;max-height:60vh}
-  table{width:100%;border-collapse:collapse;font-size:12px;table-layout:auto;} /* fixed layout for widths */
-  th{position:sticky;top:0;background:#f6f7fb;border-bottom:2px solid #e5e7f1;text-align:left;font-weight:600;cursor:pointer;white-space:normal;word-break:keep-all;line-height:1.3;padding:8px 12px;vertical-align:bottom;}
+  .table-wrapper{
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y pinch-zoom; /* prevent swipe-to-back */
+  }
+  table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
+  th{
+    position:sticky;top:0;background:#f6f7fb;border-bottom:2px solid #e5e7f1;
+    text-align:left;font-weight:600;cursor:pointer;white-space:normal;
+    word-break:keep-all;line-height:1.15;padding:8px 12px;vertical-align:bottom;
+  }
   td{border-bottom:1px solid #eef0f5;padding:12px;vertical-align:top;word-wrap:break-word}
 
-  /* Column width tweaks (based on your configured order) */
-  /* 1: Date, 2: Vendor, 3: Description, 4: Income Type */
-  th:nth-child(3), td:nth-child(3),  /* Vendor */
-  th:nth-child(4), td:nth-child(4) { /* Description */
-  white-space: normal;
-  max-width: 250px;        /* keeps description reasonable */
-  word-wrap: break-word;
-  text-align: left;
-}
+  /* Semantic column helpers */
+  .col-nowrap { white-space: nowrap; }
+  .col-center { text-align: center; }
+  .col-tight  { width: 10ch; }
+  .col-currency { width: 7.5ch; }       /* header can wrap; data is 3 chars */
+  .col-income-type { width: 14ch; }     /* header/data can wrap */
+  .col-desc   { width: 36ch; hyphens:auto; overflow-wrap:anywhere; }
 
-  th:nth-child(1), td:nth-child(1),  /* Date (Inv/Stmt) */
-th:nth-child(2), td:nth-child(2),  /* Inv # */
-th:nth-child(6), td:nth-child(6),  /* Net */
-th:nth-child(7), td:nth-child(7),  /* Gross */
-th:nth-child(8), td:nth-child(8),  /* Currency (Inv/Stmt) */
-th:nth-child(10), td:nth-child(10),/* Currency (Received) */
-th:nth-child(11), td:nth-child(11),/* Adjustments */
-th:nth-child(12), td:nth-child(12),/* Net Commissionable */
-th:nth-child(13), td:nth-child(13),/* Commission % */
-th:nth-child(14), td:nth-child(14),/* Commission */
-th:nth-child(15), td:nth-child(15) /* Mgmt Inv # */ {
-  white-space: nowrap;    /* keep on one line */
-  text-align: right;      /* numbers align neatly */
-  width: 1%;              /* let browser auto-fit to longest content */
-}
+  /* Numbers: one line, right-aligned */
+  .num-col { white-space: nowrap; text-align: right; }
 
-  /* Charts grid (2×2) */
-  .charts-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
-  .chart-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);padding:12px 12px 6px;display:flex;flex-direction:column;min-height:330px}
-  .chart-title{font-weight:700;margin:4px 8px 6px}
-  .chart-wrap{flex:1;min-height:280px}
-  @media (max-width:1024px){
-    .summary-row{grid-template-columns:1fr}
-    .charts-grid{grid-template-columns:1fr}
-    .table-wrapper{max-height:none}
-    th:nth-child(3), td:nth-child(3){width:auto}
-    th:nth-child(4), td:nth-child(4){width:auto}
-  }
-
-  .loading{padding:60px;text-align:center;color:#6e7587}
-  .error{padding:40px;margin:20px;background:#fde9ec;border:1px solid #f7c9d1;border-radius:12px;color:#8d2a3b;text-align:center}
-
-  /* Colour tags */
+  /* Pills can wrap normally */
   .tag{padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;display:inline-block;white-space:normal}
   .tag.blue{background:#e6f0ff;color:#1e5bd9}
   .tag.green{background:#e9f7ef;color:#1f7a43}
@@ -124,38 +93,46 @@ th:nth-child(15), td:nth-child(15) /* Mgmt Inv # */ {
   .tag.gray{background:#ecf0f3;color:#54616d}
   .tag.gold{background:#fff4d6;color:#a37500}
 
-/* Multi-select dropdown (clean) */
-.msel{position:relative}
-.msel-btn{
-  display:flex;align-items:center;gap:6px;
-  border:1px solid #e0e3ea;background:#fff;border-radius:8px;
-  padding:6px 10px;font-size:12px;cursor:pointer
-}
-.msel-panel{
-  position:absolute;top:110%;left:0;z-index:20;background:#fff;border:1px solid #e0e3ea;border-radius:10px;
-  width:280px;box-shadow:0 12px 30px rgba(24,27,51,.12);padding:8px;display:none;
-}
-.msel.open .msel-panel{display:block}
-.msel-list{max-height:220px;overflow:auto;padding-right:4px}
-.msel-item{
-  display:flex;align-items:center;gap:10px;
-  padding:6px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;
-}
-.msel-item:hover{background:#f6f7fb}
-.msel-footer{display:flex;justify-content:space-between;gap:8px;margin-top:8px}
-.msel-apply,.msel-clear{flex:1;border:none;border-radius:8px;padding:8px 10px;cursor:pointer}
-.msel-apply{background:#667eea;color:#fff}
-.msel-clear{background:#f1f2f8}
+  /* Multi-select dropdown */
+  .msel{position:relative}
+  .msel-btn{
+    display:flex;align-items:center;gap:6px;
+    border:1px solid #e0e3ea;background:#fff;border-radius:8px;
+    padding:6px 10px;font-size:12px;cursor:pointer
+  }
+  .msel-panel{
+    position:absolute;top:110%;left:0;z-index:20;background:#fff;border:1px solid #e0e3ea;border-radius:10px;
+    width:280px;box-shadow:0 12px 30px rgba(24,27,51,.12);padding:8px;display:none;
+  }
+  .msel.open .msel-panel{display:block}
+  .msel-list{max-height:220px;overflow:auto;padding-right:4px}
+  .msel-item{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;}
+  .msel-item:hover{background:#f6f7fb}
+  .msel-footer{display:flex;justify-content:space-between;gap:8px;margin-top:8px}
+  .msel-apply,.msel-clear{flex:1;border:none;border-radius:8px;padding:8px 10px;cursor:pointer}
+  .msel-apply{background:#667eea;color:#fff}
+  .msel-clear{background:#f1f2f8}
 
+  /* Tax year dropdown */
   .filter-select{
-  border:1px solid #e0e3ea;
-  background:#fff;
-  border-radius:8px;
-  padding:6px 10px;
-  font-size:12px;
-  height:34px;
-}
+    border:1px solid #e0e3ea;background:#fff;border-radius:8px;
+    padding:6px 10px;font-size:12px;height:34px;
+  }
+
+  @media (max-width:1024px){
+    .summary-row{grid-template-columns:1fr}
+    .charts-grid{grid-template-columns:1fr}
+    .table-wrapper{max-height:none}
+  }
   
+  /* Charts */
+  .charts-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
+  .chart-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);padding:12px 12px 6px;display:flex;flex-direction:column;min-height:330px}
+  .chart-title{font-weight:700;margin:4px 8px 6px}
+  .chart-wrap{flex:1;min-height:280px}
+
+  .loading{padding:60px;text-align:center;color:#6e7587}
+  .error{padding:40px;margin:20px;background:#fde9ec;border:1px solid #f7c9d1;border-radius:12px;color:#8d2a3b;text-align:center}
 </style>
 </head>
 <body>
@@ -223,12 +200,10 @@ th:nth-child(15), td:nth-child(15) /* Mgmt Inv # */ {
 
       <!-- Tabs moved here -->
       <div class="tabs">
-        <button class="tab-btn active" id="tabTable"  onclick="switchTab('table')">Table</button>
-        <button class="tab-btn" id="tabCharts" onclick="switchTab('charts')">Charts</button>
+        <button class="tab-btn active" id="tabTable"  onclick="switchTab('table')">📊 Table</button>
+        <button class="tab-btn" id="tabCharts" onclick="switchTab('charts')">📈 Charts</button>
       </div>
     </div>
-
-    <div class="spacer"></div>
     
     <select id="ukTaxYearSelect" class="filter-select" aria-label="UK tax year">
   <option value="">Tax Year</option>
@@ -458,6 +433,27 @@ function getUKTaxYearRange(year) {
   return { start, end };
 }
 
+  function getColClass(columnName){
+  const n = (columnName || '').toLowerCase();
+
+  // column-specific classes
+  if (n === 'income type') return 'col-income-type';
+  if (n === 'paid in date') return 'col-tight col-nowrap';
+  if (n === 'currency (inv/stmt)' || n === 'currency (received)' || n === 'currency (receipt)')
+    return 'col-currency col-center col-nowrap';
+  if (n === 'description') return 'col-desc';
+
+  // number-ish columns that should not wrap
+  const noWrapExact = new Set([
+    'date (inv/stmt)','net amount','gross amount',
+    'currency (inv/stmt)','amount received','currency (received)',
+    'adjustments','net commissionable','commission %','mgmt inv #'
+  ]);
+  if (noWrapExact.has(n)) return 'num-col col-nowrap';
+
+  return ''; // default
+}
+
 // Attach the dropdown listener once DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   const ukSel = document.getElementById('ukTaxYearSelect');
@@ -583,18 +579,24 @@ function displayTable(data){
   const pageData = rows.slice(startIndex,endIndex);
 
   const headers = data.columnHeaders || {};
-  let html = '<div class="table-wrapper"><table><thead><tr>';
-  props.forEach(p=> html += `<th data-column="${p}" onclick="sortTable('${p}')">${headers[p]||p}</th>`);
-  html += '</tr></thead><tbody>';
+let html = '<div class="table-wrapper"><table><thead><tr>';
+props.forEach(p=>{
+  const label = headers[p] || p;
+  const cls   = getColClass(label);
+  html += `<th class="${cls}" data-column="${p}" onclick="sortTable('${p}')">${label}</th>`;
+});
+html += '</tr></thead><tbody>';
 
-  pageData.forEach(rec=>{
-    const isVoided = rec.properties?.['VOID?']?.checkbox === true;
-    html += `<tr${isVoided?' style="opacity:.6;text-decoration:line-through;background:#fafbff"':''}>`;
-    props.forEach(p=>{
-      html += `<td data-column="${p}">${getDisplayValue(rec.properties?.[p], p)}</td>`;
-    });
-    html += '</tr>';
+ pageData.forEach(rec=>{
+  const isVoided = rec.properties?.['VOID?']?.checkbox === true;
+  html += `<tr${isVoided?' style="opacity:.6;text-decoration:line-through;background:#fafbff"':''}>`;
+  props.forEach(p=>{
+    const label = headers[p] || p;
+    const cls   = getColClass(label);
+    html += `<td class="${cls}">${getDisplayValue(rec.properties?.[p], p)}</td>`;
   });
+  html += '</tr>';
+});
 
   html += '</tbody></table></div>';
   tableContent.innerHTML = html;
