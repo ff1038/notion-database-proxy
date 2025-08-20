@@ -70,6 +70,10 @@ table{
   table-layout:fixed;         /* keeps a predictable grid */
   font-size:12px;
 }
+
+  /* Always box-size cells and allow wrapping inside headers */
+th, td { box-sizing: border-box; overflow: visible !important; }
+  
 th{
   position:sticky; top:0;
   background:#f6f7fb;
@@ -81,7 +85,7 @@ th{
   /* allow wrapping and prevent overflow into neighbors */
   white-space:normal;
   overflow-wrap:anywhere;     /* ✅ let long labels wrap cleanly */
-  word-break:normal;
+  word-break:break-word;
   line-height:1.15;
 }
 td{
@@ -99,11 +103,11 @@ td{
 /* 2) Narrow the Income Type column (let header/data wrap) */
 .col-income-type{ width: 14ch; }   /* wraps by default */
 
-/* 3) Currencies are short (3 letters) – narrow and centered */
-.col-currency{
-  width: 7.5ch;                    /* header wraps, data stays short */
-  text-align:center;
-  white-space:nowrap;
+/* Currency columns: allow header to wrap, but widen a touch so it's readable */
+.col-currency {
+  width: 10ch;                 /* was 7.5ch; gives header 2–3 lines comfortably */
+  text-align: center;
+  white-space: nowrap;         /* data stays 3-letter tag on one line */
 }
 
 /* 4) Numbers: never wrap + right-aligned + a safe min-width */
@@ -114,12 +118,11 @@ td{
   font-variant-numeric: tabular-nums;
 }
 
+/* Vendor + Description: give room so they never overlap */
+.col-vendor { min-width: 18ch; }
+
 /* Optional: a reasonable description width that can wrap nicely */
-.col-desc{
-  width: 34ch;
-  overflow-wrap:anywhere;
-  hyphens:auto;
-}
+.col-desc   { width: 32ch; overflow-wrap:anywhere; hyphens:auto; }
 
   /* Pills can wrap normally */
   .tag{padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;display:inline-block;white-space:normal}
@@ -477,6 +480,7 @@ function getColClass(col){
   switch (col) {
     case 'Invoice date':                 return 'col-date col-nowrap';
     case 'Inv #':                        return 'col-inv col-nowrap';
+    case 'Vendor':                        return 'col-vendor';      
     case 'Description':                  return 'col-desc';
     case 'Income Type':                  return 'col-income-type';
     case 'Currency (Inv/Stmt)':
