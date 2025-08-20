@@ -97,7 +97,7 @@
   }
 
   /* --- COLUMN HELPERS --- */
-  .col-date{ min-width: 14ch; }     
+  .col-date{ min-width: 16ch; }     
   .col-inv { min-width: 8ch;  }     
   .col-income-type{ width: 14ch; }  
   .col-currency {
@@ -231,7 +231,7 @@ th:last-child  .th-label::before { left: auto; right: 12px; transform: none; }
 
 /* tighten spacing between the rows inside toolbar */
 .toolbar .toolbar-break + * {
-  margin-top: -4px;   /* pull filters row up closer to the tabs */
+  margin-top: -10px;   /* pull filters row up closer to the tabs */
 }
   
 </style>
@@ -245,10 +245,10 @@ th:last-child  .th-label::before { left: auto; right: 12px; transform: none; }
     </div>
 
     <div class="hdr-right">
-      <div class="hdr-title"><span id="clientDisplay">Linden Jay Dashboard</span></div>
+      <div class="hdr-title"><span id="clientDisplay">Client Dashboard</span></div>
       <div class="hdr-menu" id="hdrMenu">
         <button class="hdr-btn" type="button" onclick="document.getElementById('hdrMenu').classList.toggle('open')">
-          Open
+          Menu
           <span>▾</span>
         </button>
         <div class="hdr-dd" onclick="document.getElementById('hdrMenu').classList.remove('open')">
@@ -538,14 +538,15 @@ function getUKTaxYearRange(year) {
 function getColMeta(col){
   switch (col) {
     case 'Invoice date': return { cls: 'col-date col-nowrap', tip: 'Date of the Invoice or Statement' };
-    case 'Inv #': return { cls: 'col-inv col-nowrap', tip: 'Invoice number' };
-    case 'Vendor1': return { cls: 'col-vendor', tip: 'Vendor / Label / Payer' };
+    case 'Inv #': return { cls: 'col-inv col-nowrap', tip: 'Invoice Number' };
+    case 'Vendor1': return { cls: 'col-vendor', tip: 'Vendor / Customer / Payer' };
     case 'Description': return { cls: 'col-desc', tip: 'Description' };
     case 'Income Type': return { cls: 'col-income-type', tip: 'Category of Income (e.g. Master, Publishing)' };
     case 'Currency (receipt)': return { cls: 'col-currency', tip: 'Currency actually received' };
     case 'Currency': return { cls: 'col-currency', tip: 'Currency on the Invoice or Statement' };
+    case 'Paid in Date': return { cls: 'col-income-type', tip: 'Date payment received' };
     case 'Net': return { cls: 'num-col', tip: 'Net amount invoiced/on the statement pre tax' };
-    case 'Gross': return { cls: 'num-col', tip: 'Gross amount (inc. VAT/GST)' };
+    case 'Gross': return { cls: 'num-col', tip: 'Gross amount inc. sales tax VAT/GST)' };
     case 'Amount Received': return { cls: 'num-col', tip: 'Actual amount received' };
     case 'Adjustments': return { cls: 'num-col', tip: 'Adjustments applied to commissionable amount' };
     case 'Net Commissionable': return { cls: 'num-col', tip: 'Net commissioned amount' };
