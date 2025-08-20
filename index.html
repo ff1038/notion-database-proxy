@@ -9,231 +9,195 @@
 
 <style>
   :root{ --gap:16px; --radius:12px; }
-  body{ font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; margin:0; background:#f6f7fb; color:#222; }
-
-  /* Header */
-  .dashboard-header{
-    display:flex;align-items:center;justify-content:space-between;
-    background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
-    color:#fff;padding:6px 10px;margin:0 0 8px 0;
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    margin:0; background:#f6f7fb; color:#222;
   }
-  .secure-chip{display:flex;gap:6px;align-items:center;white-space:nowrap;padding:4px 8px;border-radius:6px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);font-size:13px;}
-  .hdr-right{display:flex;align-items:center;gap:8px}
-  .hdr-title{font-weight:700;font-size:14px}
+
+  /* ---------------- Header ---------------- */
+  .dashboard-header{
+    display:flex; align-items:center; justify-content:space-between;
+    background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+    color:#fff; padding:6px 10px; margin:0 0 8px 0;
+  }
+  .secure-chip{
+    display:flex; gap:6px; align-items:center; white-space:nowrap;
+    padding:4px 8px; border-radius:6px;
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.25);
+    font-size:13px;
+  }
+  .hdr-right{display:flex; align-items:center; gap:8px}
+  .hdr-title{font-weight:700; font-size:14px}
   .hdr-menu{position:relative}
   .hdr-btn{
-    display:flex;align-items:center;gap:6px;
-    background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);
-    color:#fff;border-radius:8px;padding:6px 10px;cursor:pointer;font-size:13px;
+    display:flex; align-items:center; gap:6px; cursor:pointer; font-size:13px;
+    background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.25);
+    color:#fff; border-radius:8px; padding:6px 10px;
   }
-  .hdr-dd{position:absolute;right:0;top:110%;background:#fff;color:#1f2330;border:1px solid #e4e7ef;border-radius:10px;box-shadow:0 12px 30px rgba(31,35,48,.14);display:none;min-width:220px;overflow:hidden}
+  .hdr-dd{
+    position:absolute; right:0; top:110%; min-width:220px; overflow:hidden;
+    background:#fff; color:#1f2330; border:1px solid #e4e7ef; border-radius:10px;
+    box-shadow:0 12px 30px rgba(31,35,48,.14); display:none;
+  }
   .hdr-menu.open .hdr-dd{display:block}
-  .hdr-dd a{display:block;padding:10px 12px;text-decoration:none;color:#1f2330;font-size:13px}
+  .hdr-dd a{display:block; padding:10px 12px; text-decoration:none; color:#1f2330; font-size:13px}
   .hdr-dd a:hover{background:#f6f7fb}
-  .hdr-dd a.disabled{color:#9aa3b2;pointer-events:none;cursor:not-allowed;opacity:.6;}
+  .hdr-dd a.disabled{color:#9aa3b2; pointer-events:none; cursor:not-allowed; opacity:.6;}
 
   .page{padding:16px 20px 20px}
 
-  /* Summary */
-  .summary-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:12px;}
-  .summary-box{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-left:4px solid #667eea;}
-  .summary-title{font-size:14px;color:#6c7583;font-weight:600;margin:0 0 8px}
-  .summary-value{font-size:26px;font-weight:800;color:#1f2330}
+  /* ---------------- Summary ---------------- */
+  .summary-row{display:grid; grid-template-columns:1fr 1fr; gap:var(--gap); margin-bottom:12px;}
+  .summary-box{
+    background:#fff; border-radius:12px; padding:18px 20px;
+    box-shadow:0 2px 8px rgba(0,0,0,.06); border-left:4px solid #667eea;
+  }
+  .summary-title{font-size:14px; color:#6c7583; font-weight:600; margin:0 0 8px}
+  .summary-value{font-size:26px; font-weight:800; color:#1f2330}
 
-  /* Toolbar */
+  /* ---------------- Toolbar ---------------- */
   .toolbar{
-    background:#fff;border-radius:12px;padding:12px 16px;margin-bottom:var(--gap);
+    background:#fff; border-radius:12px; padding:12px 16px; margin-bottom:var(--gap);
     box-shadow:0 2px 8px rgba(0,0,0,.06);
-    display:flex;gap:12px;align-items:center;flex-wrap:wrap;
+    display:flex; flex-wrap:wrap; gap:12px; align-items:center;
   }
-  .filter-btn{padding:6px 12px;border:1px solid #e0e3ea;border-radius:8px;background:#fff;font-size:12px;cursor:pointer}
-  .filter-btn.active{background:#667eea;border-color:#667eea;color:#fff}
-  .search-box{border:2px solid #e5e7f1;border-radius:8px;padding:8px 12px;font-size:14px;width:260px}
-  .export-btn{background:#2fbf71;color:#fff;border:none;border-radius:8px;padding:9px 14px;cursor:pointer}
-  .spacer{flex:1}
-  #recordCount{color:#6e7587;font-size:14px}
-  .tabs{display:flex;gap:10px;margin-left:6px}
-  .tab-btn{background:#fff;border:1px solid #e0e3ea;border-radius:999px;padding:6px 14px;cursor:pointer}
-  .tab-btn.active{background:#2f2e41;color:#fff;border-color:#2f2e41}
+  .search-box{
+    border:2px solid #e5e7f1; border-radius:8px; padding:8px 12px;
+    font-size:14px; width:260px;
+  }
+  .export-btn{
+    background:#2fbf71; color:#fff; border:none; border-radius:8px;
+    padding:9px 14px; cursor:pointer;
+  }
+  #recordCount{color:#6e7587; font-size:14px}
+  .tabs{display:flex; gap:10px; margin-left:6px}
+  .tab-btn{
+    background:#fff; border:1px solid #e0e3ea; border-radius:999px;
+    padding:6px 14px; cursor:pointer;
+  }
+  .tab-btn.active{background:#2f2e41; color:#fff; border-color:#2f2e41}
 
-  /* Table */
-  .card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
+  /* Force a line break after the tabs and tighten vertical spacing */
+  .toolbar-break{flex-basis:100%; height:0; margin:0;}
+  /* Pull the entire second row upward a bit */
+  .toolbar .toolbar-break ~ *{ margin-top:-8px; }
+
+  /* Chips / dropdown triggers / select: unified height & baseline */
+  .filter-btn, .msel-btn, .filter-select{
+    height:34px; display:inline-flex; align-items:center; line-height:1;
+  }
+  .filter-btn{ padding:6px 12px; border:1px solid #e0e3ea; border-radius:8px; background:#fff; font-size:12px; cursor:pointer; }
+  .filter-btn.active{ background:#667eea; border-color:#667eea; color:#fff; }
+
+  /* Styled <select> to match chips (Tax Year) */
+  .filter-select{
+    border:1px solid #e0e3ea; background:#fff; border-radius:8px;
+    padding:0 32px 0 12px; font-size:12px; cursor:pointer;
+    appearance:none; -webkit-appearance:none; -moz-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,\
+<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'>\
+<path d='M1 1l4 4 4-4' stroke='%236c7583' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/>\
+</svg>");
+    background-repeat:no-repeat; background-position:right 10px center; background-size:10px 6px;
+  }
+  .filter-select:hover{ border-color:#cfd5e3; }
+  .filter-select:focus{
+    outline:none; border-color:#667eea; box-shadow:0 0 0 2px rgba(102,126,234,.25);
+  }
+
+  /* ---------------- Table shell ---------------- */
+  .card{background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.06); overflow:hidden}
   .table-wrapper{
-    overscroll-behavior-x: contain;
-    -webkit-overflow-scrolling: touch;
-    touch-action: pan-y pinch-zoom; /* prevent swipe-to-back */
+    overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; touch-action:pan-y pinch-zoom;
   }
+  table{width:100%; border-collapse:collapse; table-layout:fixed; font-size:12px;}
+  th, td{ box-sizing:border-box; overflow:visible !important; }
 
-  /* --- TABLE + HEADERS --- */
-  table{
-    width:100%;
-    border-collapse:collapse;
-    table-layout:fixed;         
-    font-size:12px;
-  }
-
-  th, td { 
-    box-sizing: border-box; 
-    overflow: visible !important; 
-  }
-  
   thead th{
-    position:sticky; top:0;
-    background:#f6f7fb;
-    border-bottom:2px solid #e5e7f1;
-    font-weight:600;
-    padding:6px 10px;   /* slightly tighter to fit wraps */
-    vertical-align:bottom;
-    white-space:normal;
-    overflow-wrap:anywhere;
-    word-break:break-word;
-    line-height:1.15;
-    text-align:left;
+    position:sticky; top:0; z-index:1;
+    background:#f6f7fb; border-bottom:2px solid #e5e7f1;
+    font-weight:600; padding:6px 10px; vertical-align:bottom;
+    white-space:normal; overflow-wrap:anywhere; word-break:break-word; line-height:1.15; text-align:left;
   }
-  td{
-    border-bottom:1px solid #eef0f5;
-    padding:12px;
-    vertical-align:top;
-  }
+  td{ border-bottom:1px solid #eef0f5; padding:12px; vertical-align:top; }
 
-  /* --- COLUMN HELPERS --- */
-  .col-date{ min-width: 16ch; }     
-  .col-inv { min-width: 8ch;  }     
-  .col-income-type{ width: 14ch; }  
-  .col-currency {
-    width: 10ch;
-    text-align: center;
-    white-space: nowrap;         
-  }
+  /* ---------------- Column helpers ---------------- */
+  .col-date{ min-width:16ch; }           /* Date (Inv/Stmt) */
+  .col-inv { min-width: 8ch; }           /* Inv # */
+  .col-vendor{ min-width:18ch; }
+  .col-desc{ width:32ch; overflow-wrap:anywhere; hyphens:auto; }
+  .col-income-type{ width:14ch; }        /* Header & data can wrap */
+  .col-currency{ width:10ch; text-align:center; white-space:nowrap; }  /* 3-letter code stays 1 line */
   .num-col{
-    white-space:nowrap;          
-    text-align:right;
-    min-width: 9ch;              
-    font-variant-numeric: tabular-nums;
+    white-space:nowrap; text-align:right; min-width:9ch;
+    font-variant-numeric:tabular-nums;
   }
-  .col-vendor { min-width: 18ch; }
-  .col-desc   { width: 32ch; overflow-wrap:anywhere; hyphens:auto; }
 
-  /* Pills */
-  .tag{padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;display:inline-block;white-space:normal}
-  .tag.blue{background:#e6f0ff;color:#1e5bd9}
-  .tag.green{background:#e9f7ef;color:#1f7a43}
-  .tag.purple{background:#eee9ff;color:#5c3fd6}
-  .tag.orange{background:#fff2e6;color:#c76506}
-  .tag.pink{background:#fde6f1;color:#bf2066}
-  .tag.yellow{background:#fff8d6;color:#8c6d00}
-  .tag.gray{background:#ecf0f3;color:#54616d}
-  .tag.gold{background:#fff4d6;color:#a37500}
+  /* ---------------- Pills/Tags ---------------- */
+  .tag{
+    padding:3px 8px; border-radius:12px; font-size:11px; font-weight:700;
+    display:inline-block; white-space:normal;
+  }
+  .tag.blue{background:#e6f0ff; color:#1e5bd9}
+  .tag.green{background:#e9f7ef; color:#1f7a43}
+  .tag.purple{background:#eee9ff; color:#5c3fd6}
+  .tag.orange{background:#fff2e6; color:#c76506}
+  .tag.pink{background:#fde6f1; color:#bf2066}
+  .tag.yellow{background:#fff8d6; color:#8c6d00}
+  .tag.gray{background:#ecf0f3; color:#54616d}
+  .tag.gold{background:#fff4d6; color:#a37500}
 
-  /* Multi-select dropdown */
+  /* ---------------- Multi-select dropdowns ---------------- */
   .msel{position:relative}
   .msel-btn{
-    display:flex;align-items:center;gap:6px;
-    border:1px solid #e0e3ea;background:#fff;border-radius:8px;
-    padding:6px 10px;font-size:12px;cursor:pointer
+    display:flex; align-items:center; gap:6px; font-size:12px; cursor:pointer;
+    border:1px solid #e0e3ea; background:#fff; border-radius:8px; padding:6px 10px;
   }
   .msel-panel{
-    position:absolute;top:110%;left:0;z-index:20;background:#fff;border:1px solid #e0e3ea;border-radius:10px;
-    width:280px;box-shadow:0 12px 30px rgba(24,27,51,.12);padding:8px;display:none;
+    position:absolute; top:110%; left:0; z-index:20; width:280px;
+    background:#fff; border:1px solid #e0e3ea; border-radius:10px; padding:8px;
+    box-shadow:0 12px 30px rgba(24,27,51,.12); display:none;
   }
   .msel.open .msel-panel{display:block}
-  .msel-list{max-height:220px;overflow:auto;padding-right:4px}
-  .msel-item{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;}
+  .msel-list{max-height:220px; overflow:auto; padding-right:4px}
+  .msel-item{display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:6px; cursor:pointer; white-space:nowrap;}
   .msel-item:hover{background:#f6f7fb}
-  .msel-footer{display:flex;justify-content:space-between;gap:8px;margin-top:8px}
-  .msel-apply,.msel-clear{flex:1;border:none;border-radius:8px;padding:8px 10px;cursor:pointer}
-  .msel-apply{background:#667eea;color:#fff}
+  .msel-footer{display:flex; justify-content:space-between; gap:8px; margin-top:8px}
+  .msel-apply,.msel-clear{flex:1; border:none; border-radius:8px; padding:8px 10px; cursor:pointer}
+  .msel-apply{background:#667eea; color:#fff}
   .msel-clear{background:#f1f2f8}
 
-  /* Tax year dropdown */
-  .filter-select{
-    border:1px solid #e0e3ea;background:#fff;border-radius:8px;
-    padding:3px 5px;font-size:12px;height:34px;
+  /* ---------------- Header tooltips (below header so not clipped) ---------------- */
+  .th-label{ position:relative; display:inline-block; cursor:help; }
+  .th-label::after{
+    content:attr(data-tip);
+    position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%);
+    background:#1f2330; color:#fff; padding:6px 10px; border-radius:6px;
+    font-size:11px; line-height:1.3; width:max-content; max-width:220px; white-space:normal; text-align:center;
+    opacity:0; pointer-events:none; transition:opacity .18s ease; box-shadow:0 6px 18px rgba(0,0,0,.25); z-index:999;
   }
+  .th-label::before{
+    content:""; position:absolute; top:calc(100% + 3px); left:50%; transform:translateX(-50%);
+    border:6px solid transparent; border-bottom-color:#1f2330; opacity:0; transition:opacity .18s ease; z-index:1000;
+  }
+  .th-label:hover::after, .th-label:hover::before{ opacity:1; }
+  th:first-child .th-label::after, th:first-child .th-label::before{ left:12px; transform:none; }
+  th:last-child  .th-label::after, th:last-child  .th-label::before{ right:12px; left:auto; transform:none; }
+
+  /* ---------------- Charts & misc ---------------- */
+  .charts-grid{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--gap)}
+  .chart-card{background:#fff; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,.06); padding:12px 12px 6px; display:flex; flex-direction:column; min-height:330px}
+  .chart-title{font-weight:700; margin:4px 8px 6px}
+  .chart-wrap{flex:1; min-height:280px}
+
+  .loading{padding:60px; text-align:center; color:#6e7587}
+  .error{padding:40px; margin:20px; background:#fde9ec; border:1px solid #f7c9d1; border-radius:12px; color:#8d2a3b; text-align:center}
 
   @media (max-width:1024px){
     .summary-row{grid-template-columns:1fr}
     .charts-grid{grid-template-columns:1fr}
     .table-wrapper{max-height:none}
   }
-  
-  /* Charts */
-  .charts-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
-  .chart-card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);padding:12px 12px 6px;display:flex;flex-direction:column;min-height:330px}
-  .chart-title{font-weight:700;margin:4px 8px 6px}
-  .chart-wrap{flex:1;min-height:280px}
-
-  .loading{padding:60px;text-align:center;color:#6e7587}
-  .error{padding:40px;margin:20px;background:#fde9ec;border:1px solid #f7c9d1;border-radius:12px;color:#8d2a3b;text-align:center}
-
-  /* ----- Header tooltips (rendered BELOW header so they aren't clipped) ----- */
-.th-label {
-  position: relative;
-  display: inline-block;
-  cursor: help;
-}
-
-/* bubble */
-.th-label::after {
-  content: attr(data-tip);
-  position: absolute;
-  top: calc(100% + 8px);       /* ↓ place under the header label */
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1f2330;
-  color: #fff;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  line-height: 1.3;
-  white-space: normal;
-  width: max-content;
-  max-width: 220px;
-  text-align: center;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .18s ease;
-  box-shadow: 0 6px 18px rgba(0,0,0,.25);
-  z-index: 999;                /* sit above table content */
-}
-
-/* little arrow */
-.th-label::before {
-  content: "";
-  position: absolute;
-  top: calc(100% + 3px);       /* right above the bubble */
-  left: 50%;
-  transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-bottom-color: #1f2330;/* arrow points down toward bubble */
-  opacity: 0;
-  transition: opacity .18s ease;
-  z-index: 1000;
-}
-
-/* show on hover */
-.th-label:hover::after,
-.th-label:hover::before {
-  opacity: 1;
-}
-
-/* keep tooltip fully visible near the extreme left/right columns */
-th:first-child .th-label::after,
-th:first-child .th-label::before { left: 12px; transform: none; }
-th:last-child  .th-label::after,
-th:last-child  .th-label::before { left: auto; right: 12px; transform: none; }
-
-  .toolbar-break {
-  flex-basis: 100%;   /* force line break */
-  height: 0;          /* don’t add visual height */
-  margin: 0;          /* remove any spacing */
-}
-
-/* tighten spacing between the rows inside toolbar */
-.toolbar .toolbar-break + * {
-  margin-top: -10px;   /* pull filters row up closer to the tabs */
-}
-  
 </style>
 </head>
 <body>
