@@ -67,40 +67,35 @@
   /* Table */
   .card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
   .table-wrapper{overflow:auto;max-height:60vh}
-  table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed;} /* fixed layout for widths */
-  th{position:sticky;top:0;background:#f6f7fb;border-bottom:2px solid #e5e7f1;text-align:left;padding:12px;font-weight:600;cursor:pointer;white-space:normal;}
+  table{width:100%;border-collapse:collapse;font-size:12px;table-layout:auto;} /* fixed layout for widths */
+  th{position:sticky;top:0;background:#f6f7fb;border-bottom:2px solid #e5e7f1;text-align:left;font-weight:600;cursor:pointer;white-space:normal;word-break:keep-all;line-height:1.3;padding:8px 12px;vertical-align:bottom;}
   td{border-bottom:1px solid #eef0f5;padding:12px;vertical-align:top;word-wrap:break-word}
-  td[data-column="Invoice date"],
-  td[data-column="Inv #"],
-td[data-column="Net"],
-td[data-column="Gross"],
-td[data-column="Currency"],
-td[data-column="Amount Received"],
-td[data-column="Paid in Date"],
-td[data-column="Currency (receipt)"],
-td[data-column="Adjustments"],
-td[data-column="Net Commissionable"],
-td[data-column="Commission %"],
-td[data-column="Mgmt Inv #"]{
-  white-space:normal;
-}
-
-  td[data-column="Invoice date"]{ min-width:110px; }
-td[data-column="Net"]{ min-width:90px; text-align:right; }
-td[data-column="Gross"]{ min-width:95px; text-align:right; }
-td[data-column="Currency"]{ min-width:95px; }
-td[data-column="Currency (receipt)"]{ min-width:120px; }
-td[data-column="Adjustments"]{ min-width:110px; text-align:right; }
-td[data-column="Net Commissionable"]{ min-width:150px; text-align:right; }
-td[data-column="Commission %"]{ min-width:110px; text-align:right; }
-td[data-column="Mgmt Inv #"]{ min-width:120px; }
 
   /* Column width tweaks (based on your configured order) */
   /* 1: Date, 2: Vendor, 3: Description, 4: Income Type */
-  th:nth-child(3), td:nth-child(3){width:9%;}      /* vendor */
-  th:nth-child(4), td:nth-child(4){width:16%;}      /* description */
-  th:nth-child(5), td:nth-child(5){width:7%;}      /* Income Type */
-  td:nth-child(5){white-space:normal;}              /* wrap tags/text in Income Type */
+  th:nth-child(3), td:nth-child(3),  /* Vendor */
+  th:nth-child(4), td:nth-child(4) { /* Description */
+  white-space: normal;
+  max-width: 250px;        /* keeps description reasonable */
+  word-wrap: break-word;
+  text-align: left;
+}
+
+  th:nth-child(1), td:nth-child(1),  /* Date (Inv/Stmt) */
+th:nth-child(2), td:nth-child(2),  /* Inv # */
+th:nth-child(6), td:nth-child(6),  /* Net */
+th:nth-child(7), td:nth-child(7),  /* Gross */
+th:nth-child(8), td:nth-child(8),  /* Currency (Inv/Stmt) */
+th:nth-child(10), td:nth-child(10),/* Currency (Received) */
+th:nth-child(11), td:nth-child(11),/* Adjustments */
+th:nth-child(12), td:nth-child(12),/* Net Commissionable */
+th:nth-child(13), td:nth-child(13),/* Commission % */
+th:nth-child(14), td:nth-child(14),/* Commission */
+th:nth-child(15), td:nth-child(15) /* Mgmt Inv # */ {
+  white-space: nowrap;    /* keep on one line */
+  text-align: right;      /* numbers align neatly */
+  width: 1%;              /* let browser auto-fit to longest content */
+}
 
   /* Charts grid (2×2) */
   .charts-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
@@ -151,6 +146,15 @@ td[data-column="Mgmt Inv #"]{ min-width:120px; }
 .msel-apply,.msel-clear{flex:1;border:none;border-radius:8px;padding:8px 10px;cursor:pointer}
 .msel-apply{background:#667eea;color:#fff}
 .msel-clear{background:#f1f2f8}
+
+  .filter-select{
+  border:1px solid #e0e3ea;
+  background:#fff;
+  border-radius:8px;
+  padding:6px 10px;
+  font-size:12px;
+  height:34px;
+}
   
 </style>
 </head>
@@ -224,6 +228,16 @@ td[data-column="Mgmt Inv #"]{ min-width:120px; }
       </div>
     </div>
 
+    <div class="spacer"></div>
+    
+    <select id="ukTaxYearSelect" class="filter-select" aria-label="UK tax year">
+  <option value="">Tax Year</option>
+  <option value="2025">UK TY 2025/26</option>
+  <option value="2024">UK TY 2024/25</option>
+  <option value="2023">UK TY 2023/24</option>
+  <option value="2022">UK TY 2022/23</option>
+</select>
+
     <!-- Charts -->
     <section id="chartsSection" style="display:none">
       <div class="charts-grid">
@@ -286,12 +300,16 @@ function switchTab(which){
 
 /* =================== FILTER BUTTONS =================== */
 function applyDateFilter(filter, evt){
+  // clear UK TY selection when using generic date filters
+  clearUKTaxYearSelection();
+
   document.querySelectorAll('.toolbar .filter-btn').forEach(b=>{ if(!b.id) b.classList.remove('active'); });
   if (evt && evt.target) evt.target.classList.add('active');
   currentDateFilter = filter;
   isUnpaidFilter = false; document.getElementById('unpaidBtn').classList.remove('active');
   applyFilters();
 }
+  
 function applyUnpaidFilter(){
   isUnpaidFilter = !isUnpaidFilter;
   document.getElementById('unpaidBtn').classList.toggle('active',isUnpaidFilter);
@@ -430,6 +448,43 @@ async function loadData(userEmail, secureKey, timestamp){
   }catch(e){ console.error(e); showError(`Access Denied: ${e.message}`); }
 }
 
+  /* ===== UK Tax Year (dropdown) ===== */
+let currentUKTaxYear = null; // number (start year) or null
+
+function getUKTaxYearRange(year) {
+  // 6 Apr (year) 00:00:00.000 → 5 Apr (year+1) 23:59:59.999
+  const start = new Date(year, 3, 6, 0, 0, 0, 0);          // Apr is month 3
+  const end   = new Date(year + 1, 3, 5, 23, 59, 59, 999);
+  return { start, end };
+}
+
+// Attach the dropdown listener once DOM is ready
+document.addEventListener('DOMContentLoaded', () => {
+  const ukSel = document.getElementById('ukTaxYearSelect');
+  if (!ukSel) return;
+  ukSel.addEventListener('change', (e) => {
+    const v = e.target.value;
+    currentUKTaxYear = v ? Number(v) : null;
+
+    if (currentUKTaxYear !== null) {
+      // Clear "active" styles on generic date range buttons
+      document.querySelectorAll('.toolbar .filter-btn').forEach(b => {
+        if (!b.id) b.classList.remove('active');
+      });
+      // Make sure we don't also apply the generic date filter
+      currentDateFilter = 'all';
+    }
+    applyFilters();
+  });
+});
+
+// When user clicks any of your normal date filters, clear the UK tax year selection
+function clearUKTaxYearSelection() {
+  currentUKTaxYear = null;
+  const ukSel = document.getElementById('ukTaxYearSelect');
+  if (ukSel) ukSel.value = '';
+}
+
 /* =================== FILTER / REDUCE =================== */
 function applyFilters(){
   if (!currentData) return;
@@ -438,12 +493,14 @@ function applyFilters(){
   if (!showVoidedItems){
     rows = rows.filter(r => !(r.properties?.['VOID?']?.checkbox === true));
   }
+
   if (selectedIncomeTypes.size){
     rows = rows.filter(r=>{
       const t = r.properties?.['Income Type']?.select?.name;
       return t && selectedIncomeTypes.has(t);
     });
   }
+
   if (selectedCurrencies.size){
     rows = rows.filter(r=>{
       const c = r.properties?.['Currency (Inv/Stmt)']?.select?.name
@@ -451,32 +508,49 @@ function applyFilters(){
       return c && selectedCurrencies.has(c);
     });
   }
-  if (currentDateFilter !== 'all'){
+
+  // 📌 Date filtering logic
+  if (currentUKTaxYear !== null) {
+    // If UK tax year dropdown is selected → take precedence
+    const { start, end } = getUKTaxYearRange(currentUKTaxYear);
+    rows = rows.filter(r => {
+      const d = r.properties?.['Invoice date']?.date?.start;
+      if (!d) return false;
+      const rec = new Date(d);
+      return rec >= start && rec <= end;
+    });
+  } else if (currentDateFilter !== 'all') {
+    // Otherwise fall back to existing date filter buttons
     rows = rows.filter(r=>{
       const d = r.properties?.['Invoice date']?.date?.start;
       if (!d) return false;
-      const rec = new Date(d); const now = new Date();
+      const rec = new Date(d); 
+      const now = new Date();
       if (['30','90','180','365'].includes(currentDateFilter)){
         const days = +currentDateFilter;
         return rec >= new Date(now.getTime() - days*24*3600*1000);
-      }else{
+      } else {
         return rec.getFullYear().toString() === currentDateFilter;
       }
     });
   }
+
   if (isUnpaidFilter){
     rows = rows.filter(r=>{
       const n = r.properties?.['Amount Received']?.number;
       return n==null || n===0;
     });
   }
+
   const q = (document.getElementById('searchBox').value || '').toLowerCase().trim();
   if (q){
     rows = rows.filter(rec=>{
-      let s=''; Object.values(rec.properties||{}).forEach(p => s += ' ' + getPlainValue(p));
+      let s='';
+      Object.values(rec.properties||{}).forEach(p => s += ' ' + getPlainValue(p));
       return s.toLowerCase().includes(q);
     });
   }
+
   filteredData = rows;
 
   currentPage = 1;
@@ -484,7 +558,6 @@ function applyFilters(){
   updateSummaryBoxes();
   updateCharts();
 }
-
 /* =================== TABLE =================== */
 function displayTable(data){
   const tableContent = document.getElementById('tableContent');
