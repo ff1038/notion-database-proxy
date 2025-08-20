@@ -116,7 +116,7 @@
   /* Tax year dropdown */
   .filter-select{
     border:1px solid #e0e3ea;background:#fff;border-radius:8px;
-    padding:6px 10px;font-size:12px;height:34px;
+    padding:3px 5px;font-size:12px;height:34px;
   }
 
   @media (max-width:1024px){
@@ -203,15 +203,20 @@
         <button class="tab-btn active" id="tabTable"  onclick="switchTab('table')">📊 Table</button>
         <button class="tab-btn" id="tabCharts" onclick="switchTab('charts')">📈 Charts</button>
       </div>
-    </div>
-    
-    <select id="ukTaxYearSelect" class="filter-select" aria-label="UK tax year">
+
+            <div class="spacer"></div>
+
+          <select id="ukTaxYearSelect" class="filter-select" aria-label="UK tax year">
   <option value="">Tax Year</option>
   <option value="2025">UK TY 2025/26</option>
   <option value="2024">UK TY 2024/25</option>
   <option value="2023">UK TY 2023/24</option>
   <option value="2022">UK TY 2022/23</option>
 </select>
+      
+    </div>
+    
+
 
     <!-- Charts -->
     <section id="chartsSection" style="display:none">
