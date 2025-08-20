@@ -267,7 +267,7 @@ function getUniversalColumnConfig() {
       Net: "Net Amount",
       Gross: "Gross Amount",
       Currency: "Currency (Inv/Stmt)",
-      "Paid in date": "Paid In Date",
+      "Paid in date": "Paid in Date",
       "Amount Received": "Amount Received",
       "Currency (receipt)": "Currency (Received)",
       Adjustments: "Adjustments",
