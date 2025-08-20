@@ -41,7 +41,7 @@
   .page{padding:16px 20px 20px}
 
   /* Summary */
-  .summary-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:var(--gap);}
+  .summary-row{display:grid;grid-template-columns:1fr 1fr;gap:var(--gap);margin-bottom:12px;}
   .summary-box{background:#fff;border-radius:12px;padding:18px 20px;box-shadow:0 2px 8px rgba(0,0,0,.06);border-left:4px solid #667eea;}
   .summary-title{font-size:14px;color:#6c7583;font-weight:600;margin:0 0 8px}
   .summary-value{font-size:26px;font-weight:800;color:#1f2330}
@@ -68,13 +68,34 @@
   .card{background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);overflow:hidden}
   .table-wrapper{overflow:auto;max-height:60vh}
   table{width:100%;border-collapse:collapse;font-size:14px;table-layout:fixed;} /* fixed layout for widths */
-  th{position:sticky;top:0;background:#f6f7fb;border-bottom:2px solid #e5e7f1;text-align:left;padding:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+  th{position:sticky;top:0;background:#f6f7fb;border-bottom:2px solid #e5e7f1;text-align:left;padding:12px;font-weight:600;cursor:pointer;white-space:normal;}
   td{border-bottom:1px solid #eef0f5;padding:12px;vertical-align:top;word-wrap:break-word}
+  td[data-column="Invoice date"],
+td[data-column="Net"],
+td[data-column="Gross"],
+td[data-column="Currency"],
+td[data-column="Currency (receipt)"],
+td[data-column="Adjustments"],
+td[data-column="Net Commissionable"],
+td[data-column="Commission %"],
+td[data-column="Mgmt Inv #"]{
+  white-space:nowrap;
+}
+
+  td[data-column="Invoice date"]{ min-width:110px; }
+td[data-column="Net"]{ min-width:90px; text-align:right; }
+td[data-column="Gross"]{ min-width:95px; text-align:right; }
+td[data-column="Currency"]{ min-width:95px; }
+td[data-column="Currency (receipt)"]{ min-width:120px; }
+td[data-column="Adjustments"]{ min-width:110px; text-align:right; }
+td[data-column="Net Commissionable"]{ min-width:150px; text-align:right; }
+td[data-column="Commission %"]{ min-width:110px; text-align:right; }
+td[data-column="Mgmt Inv #"]{ min-width:120px; }
 
   /* Column width tweaks (based on your configured order) */
   /* 1: Date, 2: Vendor, 3: Description, 4: Income Type */
-  th:nth-child(3), td:nth-child(3){width:34%;}      /* Description wider */
-  th:nth-child(4), td:nth-child(4){width:12%;}      /* Income Type narrower */
+  th:nth-child(3), td:nth-child(3){width:20%;}      /* Description wider */
+  th:nth-child(4), td:nth-child(4){width:7%;}      /* Income Type narrower */
   td:nth-child(4){white-space:normal;}              /* wrap tags/text in Income Type */
 
   /* Charts grid (2×2) */
@@ -104,25 +125,28 @@
   .tag.gray{background:#ecf0f3;color:#54616d}
   .tag.gold{background:#fff4d6;color:#a37500}
 
-/* Multi-select dropdown */
-.msel { position:relative }
+/* Multi-select dropdown (clean) */
+.msel{position:relative}
 .msel-btn{
   display:flex;align-items:center;gap:6px;
   border:1px solid #e0e3ea;background:#fff;border-radius:8px;
   padding:6px 10px;font-size:12px;cursor:pointer
 }
-/* Force hidden by default, even against site CSS */
 .msel-panel{
-  position:absolute;top:110%;left:0;z-index:20;background:#fff;
-  border:1px solid #e0e3ea;border-radius:10px;width:260px;
-  box-shadow:0 10px 30px rgba(24,27,51,.12);padding:8px;
-  display:none !important;                 /* <-- key line */
-  pointer-events:none;                      /* avoid stray focus */
+  position:absolute;top:110%;left:0;z-index:20;background:#fff;border:1px solid #e0e3ea;border-radius:10px;
+  width:280px;box-shadow:0 12px 30px rgba(24,27,51,.12);padding:8px;display:none;
 }
-.msel.open .msel-panel{
-  display:block !important;                 /* <-- key line */
-  pointer-events:auto;
+.msel.open .msel-panel{display:block}
+.msel-list{max-height:220px;overflow:auto;padding-right:4px}
+.msel-item{
+  display:flex;align-items:center;gap:10px;
+  padding:6px 8px;border-radius:6px;cursor:pointer;white-space:nowrap;
 }
+.msel-item:hover{background:#f6f7fb}
+.msel-footer{display:flex;justify-content:space-between;gap:8px;margin-top:8px}
+.msel-apply,.msel-clear{flex:1;border:none;border-radius:8px;padding:8px 10px;cursor:pointer}
+.msel-apply{background:#667eea;color:#fff}
+.msel-clear{background:#f1f2f8}
   
 </style>
 </head>
@@ -284,11 +308,8 @@ function toggleVoidFilter(){
 // =================== MULTI-SELECT UI ===================
 function makeMultiSelect(el, {label, options, selectedSet, onApply}){
   el.innerHTML = `
-    <button class="msel-btn" type="button">
-      <span>${label}</span><span class="msel-count"></span>▾
-    </button>
+    <button class="msel-btn" type="button"><span>${label}</span><span class="msel-count"></span>▾</button>
     <div class="msel-panel">
-      <input class="msel-search" placeholder="Search…"/>
       <div class="msel-list"></div>
       <div class="msel-footer">
         <button class="msel-clear" type="button">Clear</button>
@@ -300,84 +321,62 @@ function makeMultiSelect(el, {label, options, selectedSet, onApply}){
   const btn    = el.querySelector('.msel-btn');
   const panel  = el.querySelector('.msel-panel');
   const list   = el.querySelector('.msel-list');
-  const srch   = el.querySelector('.msel-search');
   const applyB = el.querySelector('.msel-apply');
   const clearB = el.querySelector('.msel-clear');
   const count  = el.querySelector('.msel-count');
 
-  // keep closed by default (defensive against site CSS)
-  panel.style.display = 'none';
+  function updateCount(){ count.textContent = selectedSet.size ? `(${selectedSet.size})` : ''; }
 
-  function setOpen(isOpen){
-    if (isOpen){
-      el.classList.add('open');
-      panel.style.display = 'block';
-    } else {
-      el.classList.remove('open');
-      panel.style.display = 'none';
-    }
-  }
+  function setOpen(isOpen){ panel.style.display = isOpen ? 'block' : 'none'; el.classList.toggle('open', isOpen); }
 
-  function renderList(filter=''){
-    list.innerHTML = '';
-    options
-      .filter(o => !filter || o.toLowerCase().includes(filter.toLowerCase()))
-      .forEach(o=>{
-        const id = `${label}-${o}`.replace(/\s+/g,'_');
-        const row = document.createElement('label');
-        row.className = 'msel-item';
-        row.innerHTML = `
-          <input type="checkbox" id="${id}" ${selectedSet.has(o) ? 'checked' : ''}/>
-          <span>${o}</span>
-        `;
-        // allow clicking the row to toggle the checkbox
-        row.addEventListener('click', (e)=>{
-          if (e.target.tagName !== 'INPUT'){
-            const cb = row.querySelector('input');
-            cb.checked = !cb.checked;
-          }
-        });
-        list.appendChild(row);
+  function renderList(){
+    list.innerHTML='';
+    options.forEach(o=>{
+      const id = `${label}-${o}`.replace(/\s+/g,'_');
+      const row = document.createElement('label');
+      row.className='msel-item';
+      row.innerHTML = `<input type="checkbox" id="${id}" ${selectedSet.has(o)?'checked':''}/> <span>${o}</span>`;
+      const input = row.querySelector('input');
+
+      // click anywhere on the row to toggle
+      row.addEventListener('click', (e)=>{
+        if (e.target !== input) input.checked = !input.checked;
+        input.dispatchEvent(new Event('change'));
       });
+
+      // auto-apply when a checkbox changes
+      input.addEventListener('change', ()=>{
+        if (input.checked) selectedSet.add(o); else selectedSet.delete(o);
+        updateCount();
+        // small debounce so multiple checks don't re-render too often
+        clearTimeout(row._t); row._t = setTimeout(()=> onApply && onApply(), 120);
+      });
+
+      list.appendChild(row);
+    });
   }
 
-  function updateCount(){
-    count.textContent = selectedSet.size ? `(${selectedSet.size})` : '';
-  }
-
-  btn.addEventListener('click', (e)=>{
-    e.stopPropagation();
-    renderList(); updateCount();
-    setOpen(!el.classList.contains('open'));
+  btn.addEventListener('click', ()=>{
+    const open = !el.classList.contains('open');
+    setOpen(open);
+    if (open) { renderList(); updateCount(); }
   });
 
-  srch.addEventListener('input', ()=>renderList(srch.value));
-
   clearB.addEventListener('click', ()=>{
-    selectedSet.clear();
-    renderList(srch.value);
-    updateCount();
+    selectedSet.clear(); renderList(); updateCount();
+    onApply && onApply();
   });
 
   applyB.addEventListener('click', ()=>{
-    selectedSet.clear();
-    list.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
-      const text = cb.parentElement.querySelector('span').textContent;
-      if (cb.checked) selectedSet.add(text);
-    });
-    updateCount();
     setOpen(false);
     onApply && onApply();
   });
 
-  // close when clicking outside
-  document.addEventListener('click', (e)=>{
-    if (!el.contains(e.target)) setOpen(false);
-  });
+  // close on outside click
+  document.addEventListener('click', (e)=>{ if (!el.contains(e.target)) setOpen(false); });
 
-  // initial paint
-  renderList();
-  updateCount();
+  // first render
+  renderList(); updateCount();
 }
   
 /* =================== SEARCH =================== */
@@ -515,7 +514,7 @@ function displayTable(data){
     const isVoided = rec.properties?.['VOID?']?.checkbox === true;
     html += `<tr${isVoided?' style="opacity:.6;text-decoration:line-through;background:#fafbff"':''}>`;
     props.forEach(p=>{
-      html += `<td>${getDisplayValue(rec.properties?.[p], p)}</td>`;
+      html += `<td data-column="${p}">${getDisplayValue(rec.properties?.[p], p)}</td>`;
     });
     html += '</tr>';
   });
