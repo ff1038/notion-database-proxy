@@ -259,7 +259,7 @@ function getUniversalColumnConfig() {
       "Mgmt Inv #",
     ],
     columnHeaders: {
-      "Invoice date": "Date (Inv/Stmt)",
+      "Invoice date": "Date",
       "Inv #": "Inv #",
       Vendor1: "Vendor",
       Description: "Description",
@@ -270,7 +270,7 @@ function getUniversalColumnConfig() {
       "Paid in date": "Paid in Date",
       "Amount Received": "Amount Received",
       "Currency (receipt)": "Currency (Received)",
-      Adjustments: "Adjustmentts",
+      Adjustments: "Adjustments",
       "Net Commissionable": "Net Commissionable",
       "Commission %": "Commission %",
       "Mgmt Commission": "Commission",
