@@ -63,24 +63,63 @@
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y pinch-zoom; /* prevent swipe-to-back */
   }
-  table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
-  th{
-    position:sticky;top:0;background:#f6f7fb;border-bottom:2px solid #e5e7f1;
-    text-align:left;font-weight:600;cursor:pointer;white-space:normal;
-    word-break:keep-all;line-height:1.15;padding:8px 12px;vertical-align:bottom;
-  }
-  td{border-bottom:1px solid #eef0f5;padding:12px;vertical-align:top;word-wrap:break-word}
+ /* --- TABLE + HEADERS --- */
+table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;         /* keeps a predictable grid */
+  font-size:12px;
+}
+th{
+  position:sticky; top:0;
+  background:#f6f7fb;
+  border-bottom:2px solid #e5e7f1;
+  font-weight:600;
+  padding:8px 12px;
+  vertical-align:bottom;
 
-  /* Semantic column helpers */
-  .col-nowrap { white-space: nowrap; }
-  .col-center { text-align: center; }
-  .col-tight  { width: 10ch; }
-  .col-currency { width: 7.5ch; }       /* header can wrap; data is 3 chars */
-  .col-income-type { width: 14ch; }     /* header/data can wrap */
-  .col-desc   { width: 36ch; hyphens:auto; overflow-wrap:anywhere; }
+  /* allow wrapping and prevent overflow into neighbors */
+  white-space:normal;
+  overflow-wrap:anywhere;     /* ✅ let long labels wrap cleanly */
+  word-break:normal;
+  line-height:1.15;
+}
+td{
+  border-bottom:1px solid #eef0f5;
+  padding:12px;
+  vertical-align:top;
+}
 
-  /* Numbers: one line, right-aligned */
-  .num-col { white-space: nowrap; text-align: right; }
+/* --- COLUMN HELPERS (apply to *both* th and td) --- */
+
+/* 1) Headers fully visible + fix overlap on Date / Inv# by giving them min width */
+.col-date{ min-width: 12ch; }      /* Date (Inv/Stmt) */
+.col-inv { min-width: 8ch;  }      /* Inv # */
+
+/* 2) Narrow the Income Type column (let header/data wrap) */
+.col-income-type{ width: 14ch; }   /* wraps by default */
+
+/* 3) Currencies are short (3 letters) – narrow and centered */
+.col-currency{
+  width: 7.5ch;                    /* header wraps, data stays short */
+  text-align:center;
+  white-space:nowrap;
+}
+
+/* 4) Numbers: never wrap + right-aligned + a safe min-width */
+.num-col{
+  white-space:nowrap;              /* ✅ never wrap numbers */
+  text-align:right;
+  min-width: 9ch;                  /* prevents forced wrapping in fixed layout */
+  font-variant-numeric: tabular-nums;
+}
+
+/* Optional: a reasonable description width that can wrap nicely */
+.col-desc{
+  width: 34ch;
+  overflow-wrap:anywhere;
+  hyphens:auto;
+}
 
   /* Pills can wrap normally */
   .tag{padding:3px 8px;border-radius:12px;font-size:11px;font-weight:700;display:inline-block;white-space:normal}
@@ -191,6 +230,13 @@
       <!-- (optional) custom multis -->
       <div class="msel" id="msIncomeType"></div>
       <div class="msel" id="msCurrency"></div>
+                <select id="ukTaxYearSelect" class="filter-select" aria-label="UK tax year">
+  <option value="">Tax Year</option>
+  <option value="2025">UK TY 2025/26</option>
+  <option value="2024">UK TY 2024/25</option>
+  <option value="2023">UK TY 2023/24</option>
+  <option value="2022">UK TY 2022/23</option>
+</select>
 
       <div class="spacer"></div>
 
@@ -202,18 +248,7 @@
       <div class="tabs">
         <button class="tab-btn active" id="tabTable"  onclick="switchTab('table')">📊 Table</button>
         <button class="tab-btn" id="tabCharts" onclick="switchTab('charts')">📈 Charts</button>
-      </div>
-
-            <div class="spacer"></div>
-
-          <select id="ukTaxYearSelect" class="filter-select" aria-label="UK tax year">
-  <option value="">Tax Year</option>
-  <option value="2025">UK TY 2025/26</option>
-  <option value="2024">UK TY 2024/25</option>
-  <option value="2023">UK TY 2023/24</option>
-  <option value="2022">UK TY 2022/23</option>
-</select>
-      
+      </div>      
     </div>
     
 
@@ -438,25 +473,25 @@ function getUKTaxYearRange(year) {
   return { start, end };
 }
 
-  function getColClass(columnName){
-  const n = (columnName || '').toLowerCase();
-
-  // column-specific classes
-  if (n === 'income type') return 'col-income-type';
-  if (n === 'paid in date') return 'col-tight col-nowrap';
-  if (n === 'currency (inv/stmt)' || n === 'currency (received)' || n === 'currency (receipt)')
-    return 'col-currency col-center col-nowrap';
-  if (n === 'description') return 'col-desc';
-
-  // number-ish columns that should not wrap
-  const noWrapExact = new Set([
-    'date (inv/stmt)','net amount','gross amount',
-    'currency (inv/stmt)','amount received','currency (received)',
-    'adjustments','net commissionable','commission %','mgmt inv #'
-  ]);
-  if (noWrapExact.has(n)) return 'num-col col-nowrap';
-
-  return ''; // default
+function getColClass(col){
+  switch (col) {
+    case 'Invoice date':                 return 'col-date col-nowrap';
+    case 'Inv #':                        return 'col-inv col-nowrap';
+    case 'Description':                  return 'col-desc';
+    case 'Income Type':                  return 'col-income-type';
+    case 'Currency (Inv/Stmt)':
+    case 'Currency (receipt)':
+    case 'Currency':                     return 'col-currency';
+    case 'Net':
+    case 'Gross':
+    case 'Amount Received':
+    case 'Adjustments':
+    case 'Net Commissionable':
+    case 'Mgmt Commission':
+    case 'Mgmt Inv #':
+    case 'Commission %':                 return 'num-col';
+    default:                             return '';
+  }
 }
 
 // Attach the dropdown listener once DOM is ready
@@ -586,18 +621,16 @@ function displayTable(data){
   const headers = data.columnHeaders || {};
 let html = '<div class="table-wrapper"><table><thead><tr>';
 props.forEach(p=>{
-  const label = headers[p] || p;
-  const cls   = getColClass(label);
-  html += `<th class="${cls}" data-column="${p}" onclick="sortTable('${p}')">${label}</th>`;
+  const cls = getColClass(p);
+  html += `<th class="${cls}" data-column="${p}" onclick="sortTable('${p}')">${headers[p]||p}</th>`;
 });
 html += '</tr></thead><tbody>';
 
- pageData.forEach(rec=>{
+pageData.forEach(rec=>{
   const isVoided = rec.properties?.['VOID?']?.checkbox === true;
   html += `<tr${isVoided?' style="opacity:.6;text-decoration:line-through;background:#fafbff"':''}>`;
   props.forEach(p=>{
-    const label = headers[p] || p;
-    const cls   = getColClass(label);
+    const cls = getColClass(p);
     html += `<td class="${cls}">${getDisplayValue(rec.properties?.[p], p)}</td>`;
   });
   html += '</tr>';
