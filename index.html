@@ -71,9 +71,12 @@
   th{position:sticky;top:0;background:#f6f7fb;border-bottom:2px solid #e5e7f1;text-align:left;padding:12px;font-weight:600;cursor:pointer;white-space:normal;}
   td{border-bottom:1px solid #eef0f5;padding:12px;vertical-align:top;word-wrap:break-word}
   td[data-column="Invoice date"],
+  td[data-column="Inv #"],
 td[data-column="Net"],
 td[data-column="Gross"],
 td[data-column="Currency"],
+td[data-column="Amount Received"],
+td[data-column="Paid in Date"],
 td[data-column="Currency (receipt)"],
 td[data-column="Adjustments"],
 td[data-column="Net Commissionable"],
@@ -94,9 +97,10 @@ td[data-column="Mgmt Inv #"]{ min-width:120px; }
 
   /* Column width tweaks (based on your configured order) */
   /* 1: Date, 2: Vendor, 3: Description, 4: Income Type */
-  th:nth-child(3), td:nth-child(3){width:20%;}      /* Description wider */
-  th:nth-child(4), td:nth-child(4){width:7%;}      /* Income Type narrower */
-  td:nth-child(4){white-space:normal;}              /* wrap tags/text in Income Type */
+  th:nth-child(3), td:nth-child(3){width:9%;}      /* vendor */
+  th:nth-child(4), td:nth-child(4){width:16%;}      /* description */
+  th:nth-child(5), td:nth-child(5){width:7%;}      /* Income Type */
+  td:nth-child(5){white-space:normal;}              /* wrap tags/text in Income Type */
 
   /* Charts grid (2×2) */
   .charts-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
