@@ -389,7 +389,6 @@ function makeMultiSelect(el, {label, options, selectedSet, onApply}){
   });
   document.addEventListener('click', (e)=>{ if (!el.contains(e.target)) el.classList.remove('open'); });
   renderList(); updateCount();
-}
 
 /* =================== SEARCH =================== */
 document.addEventListener('DOMContentLoaded', ()=>{
