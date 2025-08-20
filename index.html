@@ -585,6 +585,54 @@ function getSortValue(prop){
   return getPlainValue(prop).toLowerCase();
 }
 
+  /* =================== SUMMARIES =================== */
+function updateSummaryBoxes(){
+  const rows = filteredData || currentData?.results || [];
+  const totalBy = {};
+  const unpaidBy = {};
+
+  rows.forEach(r => {
+    // skip voided unless toggled on
+    if (!showVoidedItems && r.properties?.['VOID?']?.checkbox) return;
+
+    // prefer “Net” then “Net Amount”
+    const net =
+      r.properties?.['Net']?.number ??
+      r.properties?.['Net Amount']?.number ??
+      null;
+
+    if (net == null) return;
+
+    // unpaid if Amount Received is null or 0
+    const received = r.properties?.['Amount Received']?.number;
+
+    // currency (prefer invoice/statement currency)
+    const cur =
+      r.properties?.['Currency (Inv/Stmt)']?.select?.name ||
+      r.properties?.['Currency']?.select?.name ||
+      'Unknown';
+
+    totalBy[cur] = (totalBy[cur] || 0) + net;
+    if (received == null || received === 0) {
+      unpaidBy[cur] = (unpaidBy[cur] || 0) + net;
+    }
+  });
+
+  const fmt = (n) => Number(n || 0).toLocaleString('en-GB', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+  const line = (obj) =>
+    Object.entries(obj)
+      .map(([c, a]) => `${c} ${fmt(a)}`)
+      .join(' • ') || '—';
+
+  const totalEl  = document.getElementById('totalIncome');
+  const unpaidEl = document.getElementById('unpaidIncome');
+  if (totalEl)  totalEl.textContent  = line(totalBy);
+  if (unpaidEl) unpaidEl.textContent = line(unpaidBy);
+}
+
 /* =================== CHARTS (unchanged core) =================== */
 let chMonthly=null, chCurrency=null, chVendors=null, chType=null;
 function ensureCharts(){
