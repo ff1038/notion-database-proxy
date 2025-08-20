@@ -97,7 +97,7 @@ td{
 /* --- COLUMN HELPERS (apply to *both* th and td) --- */
 
 /* 1) Headers fully visible + fix overlap on Date / Inv# by giving them min width */
-.col-date{ min-width: 12ch; }      /* Date (Inv/Stmt) */
+.col-date{ min-width: 13ch; }      /* Date (Inv/Stmt) */
 .col-inv { min-width: 8ch;  }      /* Inv # */
 
 /* 2) Narrow the Income Type column (let header/data wrap) */
@@ -175,6 +175,39 @@ td{
 
   .loading{padding:60px;text-align:center;color:#6e7587}
   .error{padding:40px;margin:20px;background:#fde9ec;border:1px solid #f7c9d1;border-radius:12px;color:#8d2a3b;text-align:center}
+
+  /* Tooltip styling */
+th span[data-tip] {
+  position: relative;
+  cursor: help; /* indicates "hover for info" */
+}
+
+th span[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: 120%; /* show above header */
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f2330;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: normal;
+  width: max-content;
+  max-width: 220px;
+  text-align: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+  z-index: 50;
+}
+
+th span[data-tip]:hover::after {
+  opacity: 1;
+}
 </style>
 </head>
 <body>
@@ -216,6 +249,16 @@ td{
 
     <!-- Toolbar -->
     <div class="toolbar" id="toolbar">
+           <input type="text" class="search-box" id="searchBox" placeholder="Search data…" />
+      <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
+      <span id="recordCount"></span>
+
+      <!-- Tabs moved here -->
+      <div class="tabs">
+        <button class="tab-btn active" id="tabTable"  onclick="switchTab('table')">📊 Table</button>
+        <button class="tab-btn" id="tabCharts" onclick="switchTab('charts')">📈 Charts</button>
+      </div>     
+      
       <button class="filter-btn active" onclick="applyDateFilter('all',event)">All Time</button>
       <button class="filter-btn" onclick="applyDateFilter('30',event)">Last 30 Days</button>
       <button class="filter-btn" onclick="applyDateFilter('90',event)">Last 90 Days</button>
@@ -233,25 +276,13 @@ td{
       <!-- (optional) custom multis -->
       <div class="msel" id="msIncomeType"></div>
       <div class="msel" id="msCurrency"></div>
-                <select id="ukTaxYearSelect" class="filter-select" aria-label="UK tax year">
+  <select id="ukTaxYearSelect" class="filter-select" aria-label="UK tax year">
   <option value="">Tax Year</option>
   <option value="2025">UK TY 2025/26</option>
   <option value="2024">UK TY 2024/25</option>
   <option value="2023">UK TY 2023/24</option>
   <option value="2022">UK TY 2022/23</option>
 </select>
-
-      <div class="spacer"></div>
-
-      <input type="text" class="search-box" id="searchBox" placeholder="Search data…" />
-      <button class="export-btn" onclick="exportCSV()">⬇ Export CSV</button>
-      <span id="recordCount"></span>
-
-      <!-- Tabs moved here -->
-      <div class="tabs">
-        <button class="tab-btn active" id="tabTable"  onclick="switchTab('table')">📊 Table</button>
-        <button class="tab-btn" id="tabCharts" onclick="switchTab('charts')">📈 Charts</button>
-      </div>      
     </div>
     
 
@@ -476,25 +507,25 @@ function getUKTaxYearRange(year) {
   return { start, end };
 }
 
-function getColClass(col){
+function getColMeta(col){
   switch (col) {
-    case 'Invoice date':                 return 'col-date col-nowrap';
-    case 'Inv #':                        return 'col-inv col-nowrap';
-    case 'Vendor':                        return 'col-vendor';      
-    case 'Description':                  return 'col-desc';
-    case 'Income Type':                  return 'col-income-type';
-    case 'Currency (Inv/Stmt)':
-    case 'Currency (receipt)':
-    case 'Currency':                     return 'col-currency';
-    case 'Net':
-    case 'Gross':
-    case 'Amount Received':
-    case 'Adjustments':
-    case 'Net Commissionable':
-    case 'Mgmt Commission':
-    case 'Mgmt Inv #':
-    case 'Commission %':                 return 'num-col';
-    default:                             return '';
+    case 'Invoice date': return { cls: 'col-date col-nowrap', tip: 'Date of the invoice or statement' };
+    case 'Inv #': return { cls: 'col-inv col-nowrap', tip: 'Invoice number, if available' };
+    case 'Vendor': return { cls: 'col-vendor', tip: 'Vendor / Label / Payer' };
+    case 'Description': return { cls: 'col-desc', tip: 'Description of royalty or payment' };
+    case 'Income Type': return { cls: 'col-income-type', tip: 'Category of income (e.g. Master, Publishing)' };
+    case 'Currency (Inv/Stmt)': return { cls: 'col-currency', tip: 'Currency reported on the invoice or statement' };
+    case 'Currency (receipt)': return { cls: 'col-currency', tip: 'Currency actually received' };
+    case 'Currency': return { cls: 'col-currency', tip: 'Currency used for this record' };
+    case 'Net': return { cls: 'num-col', tip: 'Net amount (after deductions)' };
+    case 'Gross': return { cls: 'num-col', tip: 'Gross amount (before deductions)' };
+    case 'Amount Received': return { cls: 'num-col', tip: 'Actual amount received' };
+    case 'Adjustments': return { cls: 'num-col', tip: 'Adjustments applied' };
+    case 'Net Commissionable': return { cls: 'num-col', tip: 'Net commissionable value' };
+    case 'Mgmt Commission': return { cls: 'num-col', tip: 'Management commission amount' };
+    case 'Commission %': return { cls: 'num-col', tip: 'Commission percentage' };
+    case 'Mgmt Inv #': return { cls: 'col-nowrap', tip: 'Management invoice number' };
+    default: return { cls: '', tip: '' };
   }
 }
 
@@ -608,37 +639,45 @@ function displayTable(data){
     document.getElementById('recordCount').textContent='0 records';
     return;
   }
+
   const order = data.columnOrder || [];
   let props = [];
-  if (order.length){ props = order.filter(c => rows.some(r=>r.properties[c])); }
-  else{
-    const set=new Set(); rows.forEach(r=>Object.keys(r.properties||{}).forEach(k=>{if(k!=='Client') set.add(k)}));
+  if (order.length){ 
+    props = order.filter(c => rows.some(r=>r.properties[c])); 
+  } else {
+    const set = new Set(); 
+    rows.forEach(r => Object.keys(r.properties||{}).forEach(k => { if (k!=='Client') set.add(k) }));
     props=[...set];
   }
 
   const totalRecords = rows.length;
-  const totalPages = Math.ceil(totalRecords/recordsPerPage);
-  const startIndex = (currentPage-1)*recordsPerPage;
-  const endIndex = Math.min(startIndex+recordsPerPage,totalRecords);
-  const pageData = rows.slice(startIndex,endIndex);
+  const totalPages   = Math.ceil(totalRecords/recordsPerPage);
+  const startIndex   = (currentPage-1)*recordsPerPage;
+  const endIndex     = Math.min(startIndex+recordsPerPage,totalRecords);
+  const pageData     = rows.slice(startIndex,endIndex);
 
   const headers = data.columnHeaders || {};
-let html = '<div class="table-wrapper"><table><thead><tr>';
-props.forEach(p=>{
-  const cls = getColClass(p);
-  html += `<th class="${cls}" data-column="${p}" onclick="sortTable('${p}')">${headers[p]||p}</th>`;
-});
-html += '</tr></thead><tbody>';
+  let html = '<div class="table-wrapper"><table><thead><tr>';
 
-pageData.forEach(rec=>{
-  const isVoided = rec.properties?.['VOID?']?.checkbox === true;
-  html += `<tr${isVoided?' style="opacity:.6;text-decoration:line-through;background:#fafbff"':''}>`;
   props.forEach(p=>{
-    const cls = getColClass(p);
-    html += `<td class="${cls}">${getDisplayValue(rec.properties?.[p], p)}</td>`;
+    const { cls, tip } = getColMeta(p);  // use meta (class + tooltip)
+    const colLabel     = headers[p] || p;
+    html += `
+      <th class="${cls}" data-column="${p}" onclick="sortTable('${p}')">
+        <span data-tip="${tip || ''}">${colLabel}</span>
+      </th>`;
   });
-  html += '</tr>';
-});
+  html += '</tr></thead><tbody>';
+
+  pageData.forEach(rec=>{
+    const isVoided = rec.properties?.['VOID?']?.checkbox === true;
+    html += `<tr${isVoided?' style="opacity:.6;text-decoration:line-through;background:#fafbff"':''}>`;
+    props.forEach(p=>{
+      const { cls } = getColMeta(p);
+      html += `<td class="${cls}">${getDisplayValue(rec.properties?.[p], p)}</td>`;
+    });
+    html += '</tr>';
+  });
 
   html += '</tbody></table></div>';
   tableContent.innerHTML = html;
